@@ -2,7 +2,6 @@ package triblab
 
 import (
 	"fmt"
-	"sync"
 	"time"
 	"trib"
 )
@@ -12,8 +11,8 @@ type binKeeper struct {
 	Ready chan<- bool
 
 	//Tao Args for consistency
-	bin_lock sync.Mutex
-	hold_bin map[string]int
+	//bin_lock sync.Mutex
+	//hold_bin map[string]int
 	//End Tao
 
 	Keeper_addrs []string // Keepers peers' addr not included myself

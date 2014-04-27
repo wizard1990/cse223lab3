@@ -6,40 +6,39 @@ import (
 	"net/http"
 	"net/rpc"
 
-//"sync"
+	"time"
+
+	"sync"
+
 //"trib"
 )
 
-type Boardcast_bin interface {
+type BoardcastBin interface {
 	Ask(bin_name string, status *int) error
 }
 
 // RPC inside holder
 type Keep_bin struct {
-	hold_bin map[string]int
-	name     string
+	keeper *binKeeper
+	lock   sync.Mutex
+	bin    map[string]int
+}
+
+//var _ BoardcastBin = new(Keep_bin)
+
+//Get RPC function
+func Get_RPC(b *binKeeper) BoardcastBin {
+	bin_map := make(map[string]int)
+	return &Keep_bin{keeper: b, bin: bin_map}
 }
 
 func (self *Keep_bin) Ask(bin_name string, status *int) error {
-	fmt.Println("T", self.name)
-	*status = 0
-	return nil
-}
-
-//Get RPC function
-func Get_RPC() Boardcast_bin {
-	return &Keep_bin{name: "123"}
-}
-
-func (self *binKeeper) Tao_T() error {
-	fmt.Println(self.This, self.Keeper_addrs)
-	var status int
-	rpc1 := Get_RPC()
-	rpc1.Ask("1", &status)
+	fmt.Println("Asking for ", bin_name)
+	*status = 1
 	return nil
 }
 func (self *binKeeper) Serve_Consistency_RPC() error {
-	keepbiner := Keep_bin{name: "123"}
+	keepbiner := Get_RPC(self)
 	sv := rpc.NewServer()
 	e := sv.Register(keepbiner)
 	if e != nil {
@@ -50,6 +49,29 @@ func (self *binKeeper) Serve_Consistency_RPC() error {
 		self.Ready <- false
 	}
 	return http.Serve(s, sv)
+}
+
+func (self *binKeeper) Ask(server, bin_name string, status *int) error {
+	conn, e := rpc.DialHTTP("tcp", server)
+	if e != nil {
+		return e
+	}
+	e = conn.Call("Keep_bin.Ask", bin_name, status)
+	if e != nil {
+		return e
+	}
+	return nil
+}
+func (self *binKeeper) Tao_T() error {
+
+	time.Sleep(1 * time.Second)
+	var status int
+	for _, addr := range self.Keeper_addrs {
+		fmt.Println(addr)
+		self.Ask(addr, "a", &status)
+		fmt.Println(status)
+	}
+	return nil
 }
 func (self *binKeeper) start_audit_bin(bin_name string) bool {
 	return true

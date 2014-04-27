@@ -12,6 +12,10 @@ func NewBinClient(backs []string) trib.BinStorage {
 func ServeKeeper(kc *trib.KeeperConfig) error {
 	keeper := NewKeeper(kc)
 	go keeper.Tao_T()
+	e := keeper.Serve_Consistency_RPC()
+	if e != nil {
+		return e
+	}
 	return keeper.run()
 }
 
