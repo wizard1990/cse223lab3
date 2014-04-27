@@ -11,14 +11,14 @@ type binKeeper struct {
 	backs []string
 	Ready chan<- bool
 
-	//Tao Args for consistency
-	bin_lock sync.Mutex
-	hold_bin map[string]int
-	//End Tao
+	//Args for consistency
+	bin_lock   sync.Mutex
+	locked_bin map[string]int
+	//End consisntecy
 
 	//Xintian Args for replicate
 	clientMap map[string]trib.Storage
-	bc trib.BinStorage
+	bc        trib.BinStorage
 	//End Xintian
 
 	Keeper_addrs []string // Keepers peers' addr not included myself
@@ -30,6 +30,7 @@ func NewKeeper(kc *trib.KeeperConfig) *binKeeper {
 	keeper := binKeeper{backs: make([]string, len(kc.Backs)), Ready: kc.Ready}
 	keeper.Keeper_addrs = make([]string, len(kc.Addrs)-1)
 	keeper.This = kc.This
+	keeper.locked_bin = make(map[string]int)
 
 	j := 0
 	for i, _ := range kc.Addrs {
@@ -43,10 +44,14 @@ func NewKeeper(kc *trib.KeeperConfig) *binKeeper {
 	copy(keeper.backs, kc.Backs)
 
 	//Xintian for replicate
-	for _,addr := range kc.Backs{
-    keeper.clientMap[addr] = &client{addr:addr}
-	}
-	keeper.bc = &binClient{backs: kc.Backs}
+	//Cancel by Tao
+	//Plz don't commit error code
+	/*
+		for _, addr := range kc.Backs {
+			keeper.clientMap[addr] = &client{addr: addr}
+		}
+		keeper.bc = &binClient{backs: kc.Backs}
+	*/
 	//End Xintian
 
 	return &keeper
