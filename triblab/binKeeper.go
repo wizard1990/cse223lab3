@@ -8,13 +8,30 @@ import (
 )
 
 type binKeeper struct {
-	backs    []string
-	Ready    chan<- bool
+	backs []string
+	Ready chan<- bool
+
+	//Tao Args for consistency
 	bin_lock sync.Mutex
+	hold_bin map[string]int
+	//End Tao
+
+	Keeper_addrs []string // Keepers peers' addr not included myself
+	This         int      //My index // useless
 }
 
 func NewKeeper(kc *trib.KeeperConfig) *binKeeper {
 	keeper := binKeeper{backs: make([]string, len(kc.Backs)), Ready: kc.Ready}
+	keeper.Keeper_addrs = make([]string, len(kc.Addrs)-1)
+
+	j := 0
+	for i, _ := range kc.Addrs {
+		if i == kc.This {
+			continue
+		}
+		keeper.Keeper_addrs[j] = kc.Addrs[i]
+		j++
+	}
 	copy(keeper.backs, kc.Backs)
 	return &keeper
 }
