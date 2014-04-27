@@ -26,7 +26,7 @@ func (self *binServer) findUser(user string) (string, error) {
 	}
 	clients := self.server.Bin(user)
 	res := ""
-	var res string
+	//var res string
 	index := 0
 	clients[0].Get("Completed", &res)
 	if len(res) != 1 {
