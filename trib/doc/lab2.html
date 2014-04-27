@@ -1,0 +1,610 @@
+<h2>
+<a name="user-content-lab2" class="anchor" href="#lab2"><span class="octicon octicon-link"></span></a>Lab2</h2>
+
+<p>Welcome to Lab2. The goal of this lab is to use the RPC key-value pair
+we built in Lab 1 to implement scalable Tribbler front-ends and
+back-ends. In particular, you need to first wrap the key-value
+pair server into a distributed key-value pair service called
+<em>bin storage</em>, where your implementation should fit <code>trib.BinStorage</code>
+interface, and then on top of this storage layer,
+you need to implement a stateless Tribbler front-end type
+that fits <code>trib.Server</code> interface.</p>
+
+<h2>
+<a name="user-content-get-your-repo-up-to-date" class="anchor" href="#get-your-repo-up-to-date"><span class="octicon octicon-link"></span></a>Get Your Repo Up-to-date</h2>
+
+<p>First we need to update the <code>trib</code> repo:</p>
+
+<pre><code>$ cd ~/gopath/src/trib
+$ git pull /classes/cse223b/sp14/labs/trib lab2
+</code></pre>
+
+<p>If you have not changed anything in <code>trib</code> repo, this should be
+painless. However, if you changed stuff, you need to merge the
+changes.</p>
+
+<p>Also update the <code>triblab</code> repo to merge branch <code>lab2</code>. There will be
+several changes:</p>
+
+<ul>
+<li>Some line changes in <code>makefile</code>.</li>
+<li>Some added lines in <code>lab2.go</code>.</li>
+<li>A new file called <code>server_test.go</code>.</li>
+<li>A new file called <code>bins_test.go</code>.</li>
+</ul><p>If you have not touched those files and have not created file called
+<code>server_test.go</code> or <code>bins_test.go</code> by yourself, the merge should be
+painless:</p>
+
+<pre><code>$ cd ~/gopath/src/triblab
+$ git pull /classes/cse223b/sp14/labs/triblab lab2
+</code></pre>
+
+<p>If you have made changes to those files. Then you need to merge the
+changes properly.</p>
+
+<p>If you have trouble on merging the changes (on any of the repos),
+and don't know how to solve the conflicts, please ask the TA for help.</p>
+
+<h2>
+<a name="user-content-system-architecture" class="anchor" href="#system-architecture"><span class="octicon octicon-link"></span></a>System Architecture</h2>
+
+<p>The overall system architecture looks like this:</p>
+
+<p><a href="./arch.png" target="_blank"><img src="./arch.png" alt="System Arch" style="max-width:100%;"></a></p>
+
+<p>As you can see from the figure, our system is split into two parts,
+where the upper part is the Tribbler service, and the lower part is a
+general purpose distributed key-value store called "Bin Storage".  The
+Tribbler front-ends take AJAX calls from the users and translate the
+calls into bin storage calls, where the bin storage client will issue
+the calls into the "dumb" key-value back-ends via RPC. Each back-end
+here is a simple independent key-value store (which we just
+implemented in the previous lab).  There is also a keeper instance
+running in the background that maintains the bin storage in a coherent
+state. Both the bin storage clients and the keeper use the same RPC
+interface to communicate with the back-ends. The interface semantics
+defined in <code>trib.Storage</code> should be sufficient to perform all the bin
+storage tasks.</p>
+
+<h2>
+<a name="user-content-bin-storage" class="anchor" href="#bin-storage"><span class="octicon octicon-link"></span></a>Bin Storage</h2>
+
+<p><strong>Bin Storage</strong> is a distributed key-value pair storage that combines
+a bunch of <code>trib.Storage</code> back-ends and presents a single and
+scalable storage service over the network. Bin storage service is
+provided via the <code>trib.BinStorage</code> interface.</p>
+
+<p>On one hand, conceptually, bin storage combines an infinite set of
+separated <code>trib.Storage</code> instances called <em>bins</em>. Each bin has a
+different name, and a caller can fetch a bin via the
+<code>BinStorage.Bin()</code> function -- the only function in the
+<code>trib.BinStorage</code> interface.  Initially, all bins are empty.</p>
+
+<p>On the other hand, physically, a bin storage is built on top of a
+finite set of key-value storage back-ends (which we built in the last
+lab), where a bin (a virtual KV store) will be mapped to one of the
+key-value back-ends (physical KV stores). As a result, multiple bins
+might share a same back-end by splitting its key space with prefixes
+(or suffixes) that encode the bin names.  As shown in the figure
+below, an example bin storage hashes 6 bins into 3 back-ends, storing
+each bin with different prefixes inside.  When a caller calls
+<code>Get("some-key")</code> on the bin <code>"alice"</code> for example, the bin storage
+client will translate that call into a <code>Get("alice::some-key")</code> RPC
+call on back-end 0.</p>
+
+<p><a href="./bins.png" target="_blank"><img src="./bins.png" alt="Bin Storage" style="max-width:100%;"></a></p>
+
+<p>In addition to key-value stores in bins, a bin storage also coarsely
+synchronizes the logical clock across <em>all</em> the bins, so that the
+clocks won't be offset too much over time. Since the back-ends are
+"dumb" and they do not talk to each other, this clock synchronization
+is done by a background keeper process. Note that the clocks are NOT
+real-time synchronized (which would be too expensive for a distributed
+system), but only coarsely synchronized. In particular it means that
+if a <code>Clock()</code> is issued at least 3 seconds after another <code>Clock()</code>
+call, no matter which bins they are issued in, bin storage always
+guarantees that the later one always returns a clock value no smaller
+than the earlier one's.  Note that by definition, a bin storage with
+one single back-end will automatically satisfy this requirement, but
+when there are multiple back-ends, the keeper must do some maintenance
+from time to time.</p>
+
+<p>As said, in Lab1, we already implemented the back-ends, the APIs for
+both the server and the client, so we will just reuse them without
+changes (assuming that you implemented them correctly). Both the bin
+storage client and the keeper will communicate with the "dumb"
+back-ends via the RPC calls we implemented, and cooperatively they
+present a coherent bin storage interface to upper layer applications.</p>
+
+<h2>
+<a name="user-content-tribble" class="anchor" href="#tribble"><span class="octicon octicon-link"></span></a>Tribble</h2>
+
+<p>Before we look into how the Tribbler service works, let's first define
+what a tribble is.</p>
+
+<p>A Tribble is a structure type that has 4 fields:</p>
+
+<pre><code>type Trib struct {
+    User    string    // who posted this trib
+    Message string    // the content of the trib
+    Time    time.Time // the physical timestamp
+    Clock   uint64    // the logical clock
+}
+</code></pre>
+
+<p><code>Time</code> is what the front-end claims when this tribble is created, by
+reading the front-end's own physical time on the machine when <code>Post()</code>
+in a <code>trib.Server</code> is called.  However, to sort tribbles in a globally
+consistent and <em>reasonable</em> order, we cannot sort the tribbles only by
+this timestamp, because different front-ends always have different
+physical time readings. For sorting, Tribbler service needs to
+maintain a distributed logical <code>Clock</code> in <code>uint64</code>. </p>
+
+<p>When sorting many tribbles into a single timeline, you should sort by
+the fields following this priority:</p>
+
+<ol>
+<li>
+<code>Clock</code> The logical timestamp.</li>
+<li>
+<code>Time</code> The physical timestamp.</li>
+<li>
+<code>User</code> The user id.</li>
+<li>
+<code>Message</code> The message content.</li>
+</ol><p>We call this the <em>Tribble Order</em>.</p>
+
+<h2>
+<a name="user-content-tribbler-service-interface" class="anchor" href="#tribbler-service-interface"><span class="octicon octicon-link"></span></a>Tribbler Service Interface</h2>
+
+<p>The Tribbler service logic is defined by the <code>trib.Server</code> interface
+(in <code>trib/trib.go</code> file). This is how the Web user interface interacts
+with a Tribbler server.</p>
+
+<hr><pre><code>SignUp(user string) error
+</code></pre>
+
+<p>Creates a new user. After a user is created, it will never disappear
+in the system.  </p>
+
+<p>A valid user name must be no longer than <code>trib.MaxUsernameLen=15</code>
+characters but not empty, must start with a lower-case letter, and can
+only contain lower-case letters or numbers.  There is a helper
+function called <code>trib.IsValidUsername(string)</code> which you can use to
+check if a username is valid.</p>
+
+<p>Returns error when the username is invalid or the user already exists.
+Concurrent sign-ups might both succeed.</p>
+
+<hr><pre><code>ListUsers() ([]string, error)
+</code></pre>
+
+<p>Lists at least <code>trib.MinListUser=20</code> different registered users. When
+there are less than 20 users that have ever signed up, list all of
+them. The returned usernames should be sorted in alphabetical order.</p>
+
+<p>This is just for showing some users on the front page; this is not for
+listing all the users that have ever signed up, because that would be
+too expensive in a scalable system.</p>
+
+<hr><pre><code>Post(who, post string, clock uint64) error
+</code></pre>
+
+<p>Posts a tribble. <code>clock</code> is the maximum clock value this user client
+has ever seen so far by reading tribbles (via <code>Home()</code> and <code>Tribs()</code>).
+It returns error when the user does not exist or the post is too long
+(longer than <code>trib.MaxTribLen=140</code>).</p>
+
+<hr><pre><code>Tribs(user string) ([]*Trib, error)
+</code></pre>
+
+<p>Lists the recent <code>trib.MaxTribFetch=100</code> tribbles that a user posted.
+Tribbles needs to be sorted in the Tribble Order. Also, it should make
+sure that the order is the same order that the user posted the
+tribbles.</p>
+
+<hr><pre><code>Follow(who, whom string) error
+Unfollow(who, whom string) error
+IsFollowing(who, whom string) (bool, error)
+Following(who string) ([]string, error)
+</code></pre>
+
+<p>These are functions to follow/unfollow, check following and listing
+all following users of a user. A user can never follow or unfollow
+himself. When calling with <code>who</code> equals to <code>whom</code>, the functions
+return error. When the user does not exist, the functions return
+error.</p>
+
+<p>A user can follow at most <code>trib.MaxFollowing=2000</code> users. Returns
+error when trying to follow more than that.</p>
+
+<hr><pre><code>Home(user string) ([]*Trib, error)
+</code></pre>
+
+<p>List the recent <code>trib.MaxTribFetch=100</code> tribbles that are posted on
+the user's following timeline in Tribble Order.  In addition, the
+ordering should always satisfy that:</p>
+
+<ol>
+<li>If a tribble A is posted after a tribble B is posted, and they are
+posted by the same user, A always shows after B.</li>
+<li>If a tribble A is posted 10 seconds after a tribble B is posted,
+even if they are posted by different users, A always shows after B.</li>
+<li>If a tribble A is posted after a user client sees tribble B, A
+always shows after B.</li>
+</ol><p>A is <em>posted after</em> B means B calls <code>Post()</code> after A's <code>Post()</code>
+returned.</p>
+
+<p>It returns error when the user does not exist.</p>
+
+<hr><p>In addition to normal errors, these calls might also return IO errors
+if the implementation needs to communicate to a remote part.
+Returning a nil error means that the call is successfully executed;
+returning a non-nil error means that the call might be successfully
+executed or not.</p>
+
+<p>Note that <code>trib/ref</code> package contains a reference implementation for
+<code>trib.Server</code> (which use tried in the lab setup).</p>
+
+<h2>
+<a name="user-content-entry-functions" class="anchor" href="#entry-functions"><span class="octicon octicon-link"></span></a>Entry Functions</h2>
+
+<p>Your job for Lab2 is two-folded.</p>
+
+<ol>
+<li>Implement the bin storage service by implementing the keeper (the
+<code>ServeKeeper()</code> function) and the bin storage client logic (the
+<code>NewBinClient()</code> function).</li>
+<li>Reimplement the Tribbler service by translating all the Tribbler
+service calls into bin storage service calls (the <code>NewFront()</code>
+function).</li>
+</ol><p>You can find these entry functions in <code>lab2.go</code> file under <code>triblab</code>
+repo:</p>
+
+<pre><code>func NewBinClient(backs []string) trib.BinStorage
+</code></pre>
+
+<p>This function is similar to <code>NewClient()</code> in <code>lab1.go</code> but instead
+returns a <code>trib.BinStorage</code> interface.  <code>trib.BinStorage</code> has only one
+function called <code>Bin()</code>, which takes a bin name and returns a
+<code>trib.Storage</code>. A bin storage provides another layer of mapping, where
+the caller will first get a key-value storage (the bin) with a bin
+name, and then perform key-value function calls on the returned
+storage. Different bin names should logically return completely
+separated key-value storage spaces, but note that multiple bins might
+share a single physical storage underlying by appending the bin name
+as a prefix (or a suffix) in the keys.</p>
+
+<p>For your convenience, we have a new small package called <code>trib/colon</code>
+which you can use for escaping all the colons in a string. The
+escaping rule is simple, all <code>'|'</code> runes are escaped into <code>"||"</code>, and
+all <code>':'</code> runes are escaped into <code>"|:"</code>.  Please use this package
+wisely.</p>
+
+<hr><pre><code>func ServeKeeper(b *trib.KeeperConfig) error
+</code></pre>
+
+<p>This function is a blocking function, similar to <code>ServeBack()</code>.  It
+will spawn a keeper instance that maintains the distributed back-ends
+in consistent states. For Lab2, there will be only one keeper and the
+keeper do not need to do much, but in Lab3, they will be responsible
+of handling all the back-end joining, leaving, crashing and related
+key migrations. In Lab2, there will be only one keeper, but in Lab3,
+there will be multiple keepers for fault-tolerent.</p>
+
+<p>(Note: A blocking function here means that it never returns in normal
+states, and whenever it does return, it always returns an error. Some
+students implemented <code>ServeBack()</code> with <code>go http.Serve(...)</code> or
+<code>return nil</code> in Lab1; that was not correct. The right thing should be
+doing something like <code>return http.Serve(...)</code>.) </p>
+
+<p>The <code>trib.KeeperConfig</code> structure contains all the back-end serving
+addresses and also some peering information for the keepers which you
+would need in Lab3:</p>
+
+<ul>
+<li>
+<code>Backs []string</code> These are the addresses of the back-ends.  These
+are the back-ends that the keeper needs to maintain.</li>
+<li>
+<code>Keepers []string</code> These are the addresses that the keepers might
+listen on. Lab2 will have only one keeper; Lab3 will have least
+three keepers.</li>
+<li>
+<code>This int</code> The index of this keeper (in the <code>Keepers</code> list).  For
+Lab2, it will always be zero.</li>
+<li>
+<code>Id int64</code> A non-zero incarnation identifier for this keeper,
+usually derived from system clock. For Lab2, since the keeper will
+never crash, this fields does not matter.</li>
+<li>
+<code>Ready</code> A ready signal channel. It works in a way similar to how
+<code>Ready</code> works in <code>trib.BackConfig</code>. When a <code>true</code> is received on
+this channel, the distributed bin storage should be ready to serve.
+Therefore, if you need to initialize the physical back-ends in some
+way, make sure you do it before you send a signal over <code>Ready</code>, and
+don't forget to send a <code>false</code> to <code>Ready</code> when the initialization
+fails.</li>
+</ul><p>The keeper can do whatever it wants to do, but the keeper should do no
+more than maintaining the bin storage in a consistent state. It is 
+okay for a keeper to understand how a bin storage client translates the keys,
+but should not need to parse anything further in the keys or values.
+This means that with <code>NewBinClient()</code>, <code>ServeBack()</code> (implemented in
+Lab1) and <code>ServeKeeper()</code> calls, they should together provide a
+general distributed key-value pair bin storage layer, where it could
+work for any kinds of service (including but not only Tribbler).</p>
+
+<p>The keeper does not need to listen on the address given. The keeper
+address here serves more like a keeper configuration name; it tells
+the keeper launcher if a keeper should be running on the current
+machine.</p>
+
+<hr><pre><code>func NewFront(s trib.BinStorage) trib.Server
+</code></pre>
+
+<p>This function takes a bin storage, and returns an implementation of
+<code>trib.Server</code>. The returned instance then will serve as a service
+front-end that takes Tribbler service function calls, and translates
+them into key-value pair bin storage calls. This front-end should be
+stateless, concurrency safe, and ready to be killed at any time.  This
+means that at any time during its execution on any call, the back-end
+key-value pair storage always needs to stay in a consistent state.
+Also, note that one front-end might be taking multiple concurrent
+requests from the Web, and there might be multiple front-ends talking
+to the same back-end, so make sure it handles all the concurrency
+issues correctly.</p>
+
+<p>Also, be aware that the <code>trib.BinStorage</code> parameter might be <em>not</em> one
+that you just implemented in the previous entry functions, but as long
+as it satisfies the bin storage interface specification, your Tribbler
+server should work just fine.  This means that you cannot rely on the
+bin storage keeper to perform Tribbler related garbage cleaning. The
+front-ends might spawn back-ground routines that do the garbage
+cleaning by themselves.</p>
+
+<h2>
+<a name="user-content-playing-with-it" class="anchor" href="#playing-with-it"><span class="octicon octicon-link"></span></a>Playing with It</h2>
+
+<p>First is to setup the bin storage. Since we might have multiple parts
+running at the same time probably on different machines, we will have
+a configuration file that specifies the serving addresses of the
+back-ends and the keeper for the distributed bin storage.  The config
+file by default will use <code>bins.rc</code> as its file name, where <code>bins</code>
+stands for bin storage.</p>
+
+<p><code>bins.rc</code> is saved in json format, marshalling a <code>RC</code> structure type
+(defined in <code>trib/rc.go</code> file).  We have a utility program called
+<code>bins-mkrc</code> that can generate a <code>bins.rc</code> file automatically.</p>
+
+<p>Find a directory as your working directory (like <code>triblab</code>).</p>
+
+<pre><code>$ bins-mkrc -local -nback=3
+</code></pre>
+
+<p>This will generate a file called <code>bins.rc</code> under the current
+directory, and also print the file content to stdout.  <code>-local</code> means
+that all addresses will be on <code>localhost</code>.  <code>-nback=3</code> means there
+will be in total 3 back-ends.  If you remove <code>-local</code>, then it will
+generate back-ends starting from <code>172.22.14.211</code> to <code>172.22.14.220</code>,
+which are the IP address of our lab machines. For <code>bins-mkrc</code>, there
+can be at most 10 backends and 10 keepers (since we only have 10 lab
+machines).  However, you are free to create your own <code>bins.rc</code> file
+that has more back-ends and keepers. For this case, we use 3 back-ends
+and 1 keeper (the default value for <code>-nkeep</code>).</p>
+
+<p>With this configuration file generated, we can now launch the
+back-ends:</p>
+
+<pre><code>$ bins-back
+</code></pre>
+
+<p>This will read and parse the <code>bins.rc</code> file, and spawn all the
+back-ends which serving address is on this host. Since all the
+back-ends we generate here are on <code>localhost</code>, so all the 3 back-ends
+are created for this case (in different go routines). You should see
+three log lines showing that three back-ends started, but listening on
+different ports. Besides that <code>bins-back</code> reads from the configuration
+file, it is not much different from the <code>kv-serve</code> program.  You can
+also manually specify the back-ends you would like to start from the
+command line. For example, you can run the following to start only the
+first two back-ends:</p>
+
+<pre><code>$ bins-back 0 1
+</code></pre>
+
+<p>By the way, see how this program starts several independent servers at
+the same time in different go routines but in the same process, and
+now you should better understand why using the <code>rpc.DefaultServer</code> is
+not the right thing to do in Lab1.</p>
+
+<p>After the back-ends are ready, we can now start the keeper.</p>
+
+<pre><code>$ bins-keeper
+</code></pre>
+
+<p>If should print a message log that shows that the bin storage is
+ready to serve.</p>
+
+<p>To play with this distributed bin storage, we have another toy client
+program called <code>bins-client</code>:</p>
+
+<pre><code>$ bins-client
+(working on bin "")
+&gt; bin a
+(working on bin "a")
+&gt; get a
+
+&gt; set a b
+true
+&gt; get a
+b
+&gt; bin t
+(working on bin "t")
+&gt; get a b
+
+&gt; bin a
+(working on bin "a")
+&gt; get a b
+b
+...
+</code></pre>
+
+<p>This program reads the back-end addresses from <code>bins.rc</code> and can
+switch between different bins with <code>bin</code> command. The default bin
+is the bin with a name of an empty string.</p>
+
+<p>Now with the bin storage working, we can finally launch our
+Tribbler front-end that uses this distributed storage:</p>
+
+<pre><code>$ trib-front -init -addr=:rand -lab
+</code></pre>
+
+<p>You have used this utility before. The only new thing here is the
+<code>-lab</code> flag, which tells it to read the <code>bins.rc</code> file and use our lab
+implementation. This will start a stateless front-end (which you
+implemented in this lab) that will connect to the back-ends service
+addresses specified in <code>bins.rc</code>.</p>
+
+<p>Again <code>-init</code> will populate the service with some sample data.</p>
+
+<p>Now you can open your browser, connect to the front-end machine and
+play with your own implementation.</p>
+
+<p>If you want to use some other configuration file, use the <code>-rc</code> flag.
+It is supported in all the utilities above.</p>
+
+<p>Again, when you completes this lab, it should be perfectly fine to
+have multiple front-ends that connects to the set of back-ends.
+Also both the front-ends and the back-ends should be scalable.</p>
+
+<h2>
+<a name="user-content-assumptions" class="anchor" href="#assumptions"><span class="octicon octicon-link"></span></a>Assumptions</h2>
+
+<p>These are some unreal assumptions you can have for Lab2.</p>
+
+<ul>
+<li>No network communication error will happen.</li>
+<li>Once a back-end or a keeper starts, it will remain online forever.</li>
+<li>The system will always start in the following order:
+all the back-ends, the keeper, then all the front-ends.</li>
+<li>The <code>trib.Storage</code> used in the backend will return every <code>Clock()</code>
+call in less than 1 second.</li>
+<li>In the <code>trib.Storage</code> used in the backend, all storage IOs
+on a single backend are serialized (and hence provides sequential
+consistency). Each key visiting (checking if the key exist, locating
+its corresponding value, or as a process of iterating all keys) will
+take less than 1 millisecond. Read and write 1MB of data on the
+value part (in a list or a string) will take less than 1
+millisecond.  Note that <code>Keys()</code> and <code>ListKeys()</code> might take longer
+time to complete because it needs to scan over all the keys.</li>
+<li>All the front-ends, the back-ends and the keeper will be running
+on the lab machines.</li>
+<li>Although the Tribbler front-ends can be killed at any time, the
+killing won't happen very often (less than once per second).</li>
+</ul><p>Note that some of them won't stay true in Lab3, so try not to rely on
+the assumptions too much if possible.</p>
+
+<h2>
+<a name="user-content-requirements" class="anchor" href="#requirements"><span class="octicon octicon-link"></span></a>Requirements</h2>
+
+<p>In addition to the requirements specified by the interfaces, your
+implementation should also satisfy the following requirements:</p>
+
+<ul>
+<li>When the Tribbler service function call has valid arguments, the
+function call should not return any error.</li>
+<li>The front-end part should be stateless and hence ready to be killed
+at anytime.</li>
+<li>The back-ends should be scalable, and the front-end should use the
+back-ends in a scalable way. This means that when the back-end is
+the system throughput bottleneck, adding more back-ends should (with
+high probability) mitigate the bottleneck and lead to better overall
+system performance.</li>
+<li>When running on the lab machines, with more than 5 back-ends
+supporting (and assuming all the back-ends satisfies the performance
+assumptions), every Tribbler service call should return within 3
+seconds.</li>
+<li>Each back-end should maintain the same general key-value pair
+semantics as they were in Lab1. As a result, all test cases that
+pass for Lab1 should also pass for Lab2. This means that, the
+back-ends do not need to understand anything about the bin storage
+or the front-ends (like how the keys will be structured and
+organized, or how to parse the values).</li>
+</ul><h2>
+<a name="user-content-building-hints" class="anchor" href="#building-hints"><span class="octicon octicon-link"></span></a>Building Hints</h2>
+
+<p>While you are free to build the system in your own way, here are some
+suggested hints:</p>
+
+<ul>
+<li>For each service call in the front-end, if it updates anything in
+the back-end storage, use only one write-RPC call for the
+commitment. This will make sure it the call either succeed or fail.
+You might issue more write calls afterwards, but those should be
+only soft hints, where if they did not succeed, it does not leave
+the storage in an inconsistent state.</li>
+<li>Hash the tribbles and other information into all the back-ends based
+on username. You may find the package <code>hash/fnv</code> helpful for
+hashing.</li>
+<li>Synchronize the logical clocks among all the back-ends every second.
+(This will also serve as a heart-beat signal, which will be useful
+for implementing Lab3.) However, you should not try to synchronize
+the clocks for every post, because that will be not scalable.</li>
+<li>Do some garbage collection when one user have too many tribbles
+saved in the storage.</li>
+<li>Keep multiple caches for the ListUsers() call when the users are
+many. Note that when the user count is more than 20, you don't
+need to track new registered users anymore.</li>
+</ul><h2>
+<a name="user-content-possible-mistakes" class="anchor" href="#possible-mistakes"><span class="octicon octicon-link"></span></a>Possible Mistakes</h2>
+
+<p>Here are some possible mistakes that a lazy and quick but incorrect
+implementation might do:</p>
+
+<ul>
+<li>
+<strong>Read-modify-write</strong>. For example, a tribbler might read a counter
+from the key-value store, increase it by one and then write it back
+(at the same key).  This will introduce racing condition among the
+front-ends.</li>
+<li>
+<strong>Not handling errors</strong>. A tribbler service call might require
+several RPC calls to the backend. It is important to properly handle
+<em>any</em> error returned by these calls. It is okay to tell the webpage
+that an error occurred. However, it is often not a good idea to leave
+the back-end in inconsistent state.</li>
+<li>
+<strong>Sorting by the timestamps first</strong>. Again, the Tribble Order means
+that the logic clock is the first field to consider on sorting.</li>
+<li>
+<strong>Misuse the clock argument in Post()</strong>. For example, you
+might directly use that argument as the new post's clock field.
+Technically, you can do that in your code internally as long as you
+can satisfy the ordering requirements specified for <code>Home()</code> and
+<code>Tribs()</code> (you might find it very hard).  Nonetheless, intuitively,
+the clock argument tells the <em>oldest</em> tribble a user have seen
+(which might be 0 if the user has not seen any tribble yet), hence
+the new posted tribble seems to better have a clock value that is
+larger than the argument.</li>
+<li>
+<strong>Generate the clock from the timestamp</strong>. While 64-bit can cover a
+very wide time range even in the unit of nanoseconds, you should
+keep in mind that the front-ends are running on different servers
+with arbitrary physical time differences, so it is not wise to
+generate the logical <em>clock</em> from the physical <em>time</em>.</li>
+<li>
+<strong>Not handling old tribbles</strong>. Note that only the most recent 100
+tribbles of a user matter. Not handling old tribbles might lead to
+worse and worse performance over time and eventually break the
+performance promise.</li>
+</ul><h2>
+<a name="user-content-turning-in" class="anchor" href="#turning-in"><span class="octicon octicon-link"></span></a>Turning In</h2>
+
+<p>First, make sure that you have committed every piece of your code into
+the repository <code>triblab</code>. Then just type <code>make turnin</code> under the root
+of the repository.  It will generate a <code>turnin.zip</code> that contains
+everything in your git repository, and will then copy the zip file to
+a place where only the lab instructors can read.</p>
+
+<h2>
+<a name="user-content-happy-lab2" class="anchor" href="#happy-lab2"><span class="octicon octicon-link"></span></a>Happy Lab2</h2>

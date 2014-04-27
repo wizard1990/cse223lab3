@@ -1,0 +1,395 @@
+<h2>
+<a name="user-content-lab1" class="anchor" href="#lab1"><span class="octicon octicon-link"></span></a>Lab1</h2>
+
+<p>Welcome to Lab1. The goal of this lab is to implement a
+key-value pair service that can be called via RPC. In particular
+you need to:</p>
+
+<ol>
+<li>Implement a key-value storage server type that wraps a <code>trib.Store</code>
+interface object and takes http RPC requests from the network.</li>
+<li>Implement a key-value storage client type that fits <code>trib.Store</code>
+interface and RPCs a remote key-value pair server.</li>
+</ol><p>More specifically, you need to implement two entry functions that are
+defined in <code>triblab/lab1.go</code> file: <code>ServeBack()</code> and <code>NewClient()</code>.
+Now, they are both implemented with <code>panic("todo")</code>.</p>
+
+<h2>
+<a name="user-content-get-your-repo-up-to-date" class="anchor" href="#get-your-repo-up-to-date"><span class="octicon octicon-link"></span></a>Get Your Repo Up-to-date</h2>
+
+<p>If you cloned your source folder before Tuesday April, 1st.
+You might need to first get your repo up-to-date:</p>
+
+<pre><code>$ cd ~/gopath/src/trib
+$ git pull /classes/cse223b/sp14/labs/trib lab1
+$ cd ~/gopath/src/triblab
+$ git pull /classes/cse223b/sp14/labs/triblab lab1
+</code></pre>
+
+<p>The instructions here assume you used the the default directory
+setup.</p>
+
+<h2>
+<a name="user-content-the-key-value-pair-service-interface" class="anchor" href="#the-key-value-pair-service-interface"><span class="octicon octicon-link"></span></a>The Key-value Pair Service Interface</h2>
+
+<p>The goal of Lab1 is to wrap a key-value pair interface
+with RPC. Although you don't need to implement the key-value
+pair storage by
+yourself, you need to use it extensively in later labs, so it will be
+good for you to understand the service semantics here.</p>
+
+<p>The data structure and interfaces for the key-value pair service is
+defined in <code>trib/kv.go</code> file (in the <code>trib</code> repository). The main
+interface is <code>trib.Storage</code> interface, which consists of three parts.</p>
+
+<p>First is the key-string pair part.</p>
+
+<pre><code>// Key-value pair interfaces
+// Default value for all keys is empty string
+type KeyString interface {
+    // Gets a value. Empty string by default.
+    Get(key string, value *string) error
+
+    // Set kv.Key to kv.Value. Set succ to true when no error.
+    Set(kv *KeyValue, succ *bool) error
+
+    // List all the keys of non-empty pairs where the key matches
+    // the given pattern.
+    Keys(p *Pattern, list *List) error
+}
+</code></pre>
+
+<p><code>Pattern</code> is a prefix-suffix tuple. It has a <code>Match(string)</code> function
+that returns true when the string matches the pattern.</p>
+
+<p>Second is the key-list pair part.</p>
+
+<pre><code>// Key-list interfaces.
+// Default value for all lists is an empty list.
+// After the call, list.L should never by nil.
+type KeyList interface {
+    // Get the list.
+    ListGet(key string, list *List) error
+
+    // Append a string to the list. Set succ to true when no error.
+    ListAppend(kv *KeyValue, succ *bool) error
+
+    // Removes all elements that equal to kv.Value in list kv.Key
+    // n is set to the number of elements removed.
+    ListRemove(kv *KeyValue, n *int) error
+
+    // List all the keys of non-empty lists, where the key matches
+    // the given pattern.
+    ListKeys(p *Pattern, list *List) error
+}
+</code></pre>
+
+<p>And finally we put it together, and add an auto-incrementing clock service:</p>
+
+<pre><code>type Storage interface {
+    // Returns an auto-incrementing clock, the returned value
+    // will be no smaller than atLeast, and it will be
+    // strictly larger than the value returned last time,
+    // unless it was math.MaxUint64.
+    Clock(atLeast uint64, ret *uint64) error
+
+    KeyString
+    KeyList
+}
+</code></pre>
+
+<p>Note that the function signature of these methods are all RPC
+friendly. You should directly implement the RPC interface with Go
+language's <a href="http://golang.org/pkg/net"><code>rpc</code></a> package.  By doing this,
+another person's client that speaks the same protocol will be able to
+talk to your server as well.</p>
+
+<p>Under the definition of the execution logic, all the methods will
+always return <code>nil</code> error. Hence all errors you see from this
+interface will be communication errors. You can assume that each call
+(on the same key) is an atomic transaction; two concurrent writes
+won't give the key a weird value that comes from nowhere.  However,
+when an error occurs, the caller won't know if the transaction is
+committed or not, because the error might occur before or after the
+transaction.</p>
+
+<h2>
+<a name="user-content-entry-functions" class="anchor" href="#entry-functions"><span class="octicon octicon-link"></span></a>Entry Functions</h2>
+
+<p>These are the two entry functions you need to implement for
+this Lab.
+This is how other people's code (and your own code in later
+labs) will use your code.</p>
+
+<pre><code>func ServeBack(b *trib.Back) error
+</code></pre>
+
+<p>This function creates an instance of a back-end server based on
+configuration <code>b *trib.Back</code>. Structure <code>trib.Back</code> is defined in
+<code>trib/config.go</code> file.  In the struct type, it has several fields:</p>
+
+<ul>
+<li>
+<code>Addr</code> is the address the server should listen on, in the form of
+<code>&lt;host&gt;:&lt;port&gt;</code>. Go language uses this address in its <a href="http://golang.org/pkg/net">standard
+<code>net</code> package</a>, so you should be able to
+use it directly on opening connections.<br>
+</li>
+<li>
+<code>Store</code> is the storage device you will use for storing stuff. In
+fact, You should not store persistent data anywhere else.
+<code>Store</code> will never be nil.</li>
+<li>
+<code>Ready</code> is a channel for notifying the other parts in the program
+that the server is ready to accept RPC calls from the network
+(by sending value <code>true</code>) or the server failed to setup the
+connection (by sending value <code>false</code>). <code>Ready</code> might be nil (means
+the caller does not care about when it is ready).</li>
+</ul><p>This function should be a blocking call. It does not return until an
+error (like the network is shutdown) occurred.</p>
+
+<p>Note that you don't need to (and should not) implement the key-value
+pair storage by yourself.  You only need to wrap the given <code>Store</code>
+with RPC, so that a remote client can access it via the network.</p>
+
+<hr><pre><code>func NewClient(addr string) trib.Stroage
+</code></pre>
+
+<p>This function takes <code>addr</code> as a TCP address in the form of
+<code>&lt;host&gt;:&lt;port&gt;</code>, and connects to this address for an http
+RPC server. It returns an implementation of <code>trib.Storage</code>, which
+will provide the interface, but all calls will be actually RPCs
+to the server. You can assume <code>addr</code> will always be a valid TCP
+address.</p>
+
+<p>Note that when <code>NewClient()</code> is called, the server might not start
+up yet. While it is okay to make a try to connect the server at this
+time, you should not report any error if your attempt failed.  It
+might be better to establish the connection when you need to perform
+your first RPC function call.</p>
+
+<h2>
+<a name="user-content-the-rpc-package" class="anchor" href="#the-rpc-package"><span class="octicon octicon-link"></span></a>The RPC Package</h2>
+
+<p>Go language comes with its own
+<a href="http://golang.org/pkg/net/rpc"><code>net/rpc</code></a> package in its standard
+library, and we will just use that.  Note that the <code>trib.Store</code>
+interface is already in its "RPC friendly" form.</p>
+
+<p>Your RPC needs to use the default encoding <code>encoding/gob</code>, listen on
+the given address, and serve as an http RPC server. The server
+needs to register the back-end key-value pair object under the
+name <code>Storage</code>.</p>
+
+<h2>
+<a name="user-content-testing" class="anchor" href="#testing"><span class="octicon octicon-link"></span></a>Testing</h2>
+
+<p>Both the <code>trib</code> and <code>triblab</code> repository comes with a makefile with
+some handy command line shorthands, and also some basic testing code.</p>
+
+<p>Under the <code>trib</code> directory, if you type <code>make test</code>, you should see
+that the test runs and all passed.</p>
+
+<p>Under the <code>triblab</code> directory, if you type <code>make test</code> however, you
+would see the test fails with a todo panic if you have not implement.</p>
+
+<p>You should implement the logic and try to pass those test cases. If
+you pass those, you should be fairly confident that you can get at
+least 30% of the credits for Lab1 (unless you are cheating in some
+way).</p>
+
+<p>However, the test that comes with the repository is very basic and
+simple.  Though you don't have to, you should really write more test
+cases to make sure your implementation matches the specification.</p>
+
+<p>For more information on writing test cases in Go language, please read
+the <a href="http://golang.org/pkg/testing/">testing</a> package document page.</p>
+
+<h2>
+<a name="user-content-starting-hints" class="anchor" href="#starting-hints"><span class="octicon octicon-link"></span></a>Starting Hints</h2>
+
+<p>While you are free to do the project in your own way as long as
+it fits the specification, matches the interfaces and passes the
+tests, here are some suggested steps for you to start.</p>
+
+<p>First, create a <code>client.go</code> file under <code>triblab</code> repo, and declare a
+new struct type called <code>client</code>:</p>
+
+<pre><code>package triblab
+
+type client struct {
+    // your private fields will go here
+}
+</code></pre>
+
+<p>Then add method functions to this new <code>client</code> type so that
+it matches <code>trib.Storage</code> interface. For example, for the <code>Get()</code>
+function:</p>
+
+<pre><code>func (self *client) Get(key string, value *string) error {
+    panic("todo")
+}
+</code></pre>
+
+<p>After you added all the functions, you can write a line for compile
+time checking if all the functions are implemented:</p>
+
+<pre><code>var _ trib.Storage = new(client)
+</code></pre>
+
+<p>This creates a zero-filled <code>client</code> and assigns it to an anonymous
+object of <code>trig.Storage</code> interface. Your code hence only compiles when
+<code>client</code> satisfies the interface. (Since this zero-filled variable is
+anonymous and nobody can access it, it will be removed as dead code by
+the compiler optimizer and hence has no negative effect to the
+run-time execution.)</p>
+
+<p>Now add a field into <code>client</code> called <code>addr</code>, which will save the
+server address. Now <code>client</code> looks like this:</p>
+
+<pre><code>type client struct {
+    addr string
+}
+</code></pre>
+
+<p>Now that we have a client type that satisfies <code>trib.Stroage</code>, we
+can return this type in our entry function <code>NewClient()</code>. So remove
+the <code>panic("todo")</code> line in <code>NewClient()</code>, and replace it by
+returning a new <code>client</code> object. Now the <code>NewClient()</code> function
+should somehow look like this:</p>
+
+<pre><code>func NewClient(addr string) trib.Storage {
+    return &amp;client{addr: addr}
+}
+</code></pre>
+
+<p>Now we have the code skeleton for the RPC client, and we will fill
+in the actual logic that performs the RPC calls.</p>
+
+<p>To do an RPC call, we need to import the <code>rpc</code> package, so at the
+start of <code>client.go</code> file, lets import that after the package name
+statement.</p>
+
+<pre><code>import (
+    "net/rpc"
+)
+</code></pre>
+
+<p>And following the examples given in the <code>rpc</code> package, we can
+write the RPC client logic. For example, the <code>Get()</code> method
+should somehow look like this:</p>
+
+<pre><code>func (self *client) Get(key string, value *string) error {
+    // connect to the server
+    conn, e := rpc.DialHTTP("tcp", self.addr)
+    if e != nil {
+        return e
+    }
+
+    // perform the call
+    e = conn.Call("Storage.Get", key, value)
+    if e != nil {
+        conn.Close()
+        return e
+    }
+
+    // close the connection
+    return conn.Close()
+}
+</code></pre>
+
+<p>However, note that if you do it this way, you will open a new HTTP
+connection for every RPC call. It is okay but obviously not the most
+efficient way to do so.  I will leave it for yourself to figure out
+how to maintain a persistent RPC connection.</p>
+
+<p>That was the client side. You also need to wrap the server side in the
+<code>ServeBack()</code> function using the <code>rpc</code> library. This should be pretty
+straight-forward by creating an RPC server, registering the <code>Store</code>
+member field in <code>b *trib.Config</code> parameter under the name of
+<code>Storage</code>, and serving it as an HTTP server. The code should be
+similar to one of the examples given in the
+<a href="http://golang.org/pkg/net/rpc"><code>rpc</code></a> package documentation. Just
+remember that you need to register as <code>Storage</code> and also need to send
+a <code>true</code> over the <code>Ready</code> channel when the service is ready (when
+<code>Ready</code> is not <code>nil</code>), but send a <code>false</code> when you encounter any error
+on starting your service.</p>
+
+<p>When all of those are done, you should pass the test cases written in
+<code>back_test.go</code> file. It calls the <code>CheckStorage()</code> function defined
+in <code>trib/tribtest</code> package, and performs some basic checks on if an
+RPC client and a server (that runs on the same host) will satisfy the
+specification of a key-value pair service (as a local
+<code>trib/store.Storage</code> will do without RPC).</p>
+
+<h2>
+<a name="user-content-playing-with-it" class="anchor" href="#playing-with-it"><span class="octicon octicon-link"></span></a>Playing with It</h2>
+
+<p>To do some simple test with your own implementation, you can use the
+<code>kv-client</code> and <code>kv-server</code> command line launcher.</p>
+
+<p>First make sure your code compiles.</p>
+
+<p>Then run the server.</p>
+
+<pre><code>$ kv-server
+</code></pre>
+
+<p><em>(You might need to add <code>$GOPATH/bin</code> into your <code>$PATH</code> to run this.)</em></p>
+
+<p>And you should see an address printing out, say it is
+<code>localhost:12086</code>. (Note that you can also specify your own address
+via command line. The default address is <code>localhost:rand</code>.)</p>
+
+<p>Now you can play with your server via the <code>kv-client</code> program.
+For example:</p>
+
+<pre><code>$ kv-client localhost:12086 get hello
+
+$ kv-client localhost:12086 set h8liu run
+true
+$ kv-client localhost:12086 get h8liu
+run
+$ kv-client localhost:12086 keys h8
+h8liu
+$ kv-client localhost:12086 list-get hello
+$ kv-client localhost:12086 list-get h8liu
+$ kv-client localhost:12086 list-append h8liu something
+true
+$ kv-client localhost:12086 list-get h8liu
+something
+$ kv-client localhost:12086 clock
+0
+$ kv-client localhost:12086 clock
+1
+$ kv-client localhost:12086 clock
+2
+$ kv-client localhost:12086 clock 200
+200
+</code></pre>
+
+<h2>
+<a name="user-content-requirements" class="anchor" href="#requirements"><span class="octicon octicon-link"></span></a>Requirements</h2>
+
+<ul>
+<li>When the network and the storage is errorless, RPC to your server
+should not return any error.</li>
+<li>When the network has error (like the back-end server crashed, and
+the client hence cannot connect), your RPC client should return
+error. However when the server is back up running, your RPC client
+should act as normal again (without the need of creating a new
+client). </li>
+<li>When the server and the clients are running on the lab machines, for
+each function call, the latency introduced by your RPC (comparing
+with direct local function calls) should be less than 0.1 second.</li>
+</ul><h2>
+<a name="user-content-turning-in" class="anchor" href="#turning-in"><span class="octicon octicon-link"></span></a>Turning In</h2>
+
+<p>First, make sure that you have committed every piece of your code into
+the repository <code>triblab</code>. Then just type <code>make turnin</code> under the root
+of the repository.  It will generate a <code>turnin.zip</code> that contains
+everything in your git repository, and will then copy the zip file to
+a place where only the lab instructors can read.</p>
+
+<h2>
+<a name="user-content-happy-lab1" class="anchor" href="#happy-lab1"><span class="octicon octicon-link"></span></a>Happy Lab1!</h2>

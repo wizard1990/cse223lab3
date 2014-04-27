@@ -1,0 +1,71 @@
+<%= pagetop("CSE 223B Labs") %>
+
+<style type="text/css">
+    div.labbody {
+        max-width: 900px;
+    }
+
+    ul.labs {
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 120%;
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    ul.labs li {
+        display: inline-block;
+        margin-right: 20px;
+    }
+
+    code, tt {
+      margin: 0 2px;
+      padding: 0 5px;
+      white-space: nowrap;
+      border: 1px solid #eaeaea;
+      background-color: #f8f8f8;
+      border-radius: 3px;
+    }
+     
+    pre code {
+      margin: 0;
+      padding: 0;
+      white-space: pre;
+      border: none;
+      background: transparent;
+    }
+     
+    .highlight pre {
+      background-color: #f8f8f8;
+      border: 1px solid #cccccc;
+      font-size: 13px;
+      line-height: 19px;
+      overflow: auto;
+      padding: 6px 10px;
+      border-radius: 3px;
+    }
+     
+    pre {
+      background-color: #f8f8f8;
+      border: 1px solid #cccccc;
+      font-size: 13px;
+      line-height: 19px;
+      overflow: auto;
+      padding: 6px 10px;
+      border-radius: 3px;
+    }
+     
+    pre code, pre tt {
+      background-color: transparent;
+      border: none;
+    }
+</style>
+
+<ul class="labs">
+    <li><a href="labs.html">Lab Home</a></li>
+    <li><a href="lab1.html">Lab 1</a></li>
+    <li><a href="lab2.html">Lab 2</a></li>
+    <!-- <a href="lab3.html">Lab 3</a> -->
+</ul>
+
+<div class="labbody">
