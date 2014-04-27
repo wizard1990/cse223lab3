@@ -70,6 +70,10 @@ func (self *binServer) SignUp(user string) error {
 	if e := client.Set(&trib.KeyValue{user, "1"}, &succ); e != nil {
 		return e
 	}
+	if e := client.Set(&trib.KeyValue{"Completed", "1"}, &succ); e != nil {
+		return e
+	}
+
 	client = self.server.Bin("ListUsers")
 	succ = false
 	e = client.ListAppend(&trib.KeyValue{"ListUsers", user}, &succ)
