@@ -18,15 +18,18 @@ type binKeeper struct {
 
 	Keeper_addrs []string // Keepers peers' addr not included myself
 	This         int      //My index // useless
+	This_Addr    string
 }
 
 func NewKeeper(kc *trib.KeeperConfig) *binKeeper {
 	keeper := binKeeper{backs: make([]string, len(kc.Backs)), Ready: kc.Ready}
 	keeper.Keeper_addrs = make([]string, len(kc.Addrs)-1)
+	keeper.This = kc.This
 
 	j := 0
 	for i, _ := range kc.Addrs {
 		if i == kc.This {
+			keeper.This_Addr = kc.Addrs[i]
 			continue
 		}
 		keeper.Keeper_addrs[j] = kc.Addrs[i]
