@@ -13,7 +13,7 @@ type binKeeper struct {
 
 func NewKeeper(kc *trib.KeeperConfig) *binKeeper {
 	keeper := binKeeper{backs: make([]string, len(kc.Backs)), Ready: kc.Ready}
-	copy(keeper.backs, kc.Backs)
+	copy(keeper.backs, kc.Backs) 
 	return &keeper
 }
 
