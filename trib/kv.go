@@ -76,5 +76,5 @@ type Storage interface {
 // Key-Storage interface
 type BinStorage interface {
 	// Fetch a storage based on the given bin name.
-	Bin(name string) []Storage
+	Bin(name string) Storage
 }
