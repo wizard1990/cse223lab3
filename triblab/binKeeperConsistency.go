@@ -31,6 +31,7 @@ func Get_RPC(b *binKeeper) BoardcastBin {
 }
 
 func (self *Keep_bin) Ask(bin_name string, status *int) error {
+	//Lock or not??????
 	//fmt.Println("Asking for ", bin_name)
 	value, ok := self.keeper.locked_bin[bin_name]
 	if ok {
