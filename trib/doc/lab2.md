@@ -221,10 +221,12 @@ These are functions to follow/unfollow, check following and listing
 all following users of a user. A user can never follow or unfollow
 himself. When calling with `who` equals to `whom`, the functions
 return error. When the user does not exist, the functions return
-error.
+error. If a user performs `Folllow()` on another user over multiple
+client concurrently only one `Follow()` should succeed with no errors.
 
-A user can follow at most `trib.MaxFollowing=2000` users. Returns
-error when trying to follow more than that.
+A user can follow at most `trib.MaxFollowing=2000` users (not
+including himself). When a user tries to follow more than
+`trib.MasFollowing=2000` users, `Follow()` should return error.
 
 ***
 
@@ -570,6 +572,8 @@ suggested hints:
 - Keep multiple caches for the ListUsers() call when the users are
   many. Note that when the user count is more than 20, you don't
   need to track new registered users anymore.
+- Keep a log for the users that a user follows, where each log
+  entry is an action of `Follow()` or `Unfollow()`.
 
 ## Possible Mistakes
 
@@ -592,7 +596,7 @@ implementation might do:
   Technically, you can do that in your code internally as long as you
   can satisfy the ordering requirements specified for `Home()` and
   `Tribs()` (you might find it very hard).  Nonetheless, intuitively,
-  the clock argument tells the *oldest* tribble a user have seen
+  the clock argument tells the *latest* tribble a user have seen
   (which might be 0 if the user has not seen any tribble yet), hence
   the new posted tribble seems to better have a clock value that is
   larger than the argument.

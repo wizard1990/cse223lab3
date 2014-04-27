@@ -4,7 +4,6 @@ import (
     "trib"
     "fmt"
     "time"
-    "sync"
 )
 
 type binKeeper struct {
@@ -14,19 +13,19 @@ type binKeeper struct {
 
 func NewKeeper(kc *trib.KeeperConfig) *binKeeper {
     keeper := binKeeper{backs:make([]string, len(kc.Backs)), Ready:kc.Ready}
-    copy(self.backs, kc.Backs)
+    copy(keeper.backs, kc.Backs)
     return &keeper
 }
 
 func (self *binKeeper) run() error {
     testChan := make(chan error, len(self.backs))
-    bc := newBinClient(self.backs)
+    bc := NewBinClient(self.backs)
 
     //check the connection to each back-end
     for _, addr := range self.backs {
         go func(addr string) {
-            t uint64 
-            testChan <- bs.Bin(addr).Clock(0, &t)
+            var t uint64 = 0
+            testChan <- bc.Bin(addr).Clock(0, &t)
         }(addr)
     }
     for i := 0; i < len(self.backs); i++ {

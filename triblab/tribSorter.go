@@ -19,19 +19,16 @@ func (a ByTime) Less(i, j int) bool {
     return compare(a[i], a[j])
 }
 
-func compare(t1, t2 *trib.Trib) {
+func compare(t1, t2 *trib.Trib) bool {
     if t1.Clock < t2.Clock {
         return true
-    }
-    else if t1.Clock == t2.Clock {
+    } else if t1.Clock == t2.Clock {
         if t1.Time.Before(t2.Time) {
             return true
-        }
-        else if t1.Time.Equal(t2.Time) {
+        } else if t1.Time.Equal(t2.Time) {
             if t1.User < t2.User {
                 return true
-            }
-            else if t1.User == t2.User {
+            } else if t1.User == t2.User {
                 return t1.Message < t2.Message
             }
         }

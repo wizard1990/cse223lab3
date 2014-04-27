@@ -3,11 +3,14 @@ package store
 
 import (
 	"container/list"
+	"log"
 	"math"
 	"sync"
 
 	"trib"
 )
+
+var Logging bool
 
 type strList []string
 
@@ -50,6 +53,10 @@ func (self *Storage) Clock(atLeast uint64, ret *uint64) error {
 		self.clock++
 	}
 
+	if Logging {
+		log.Printf("Clock(%d) => %d", atLeast, *ret)
+	}
+
 	return nil
 }
 
@@ -58,6 +65,11 @@ func (self *Storage) Get(key string, value *string) error {
 	defer self.strLock.Unlock()
 
 	*value = self.strs[key]
+
+	if Logging {
+		log.Printf("Get(%q) => %q", key, *value)
+	}
+
 	return nil
 }
 
@@ -72,6 +84,11 @@ func (self *Storage) Set(kv *trib.KeyValue, succ *bool) error {
 	}
 
 	*succ = true
+
+	if Logging {
+		log.Printf("Set(%q, %q)", kv.Key, kv.Value)
+	}
+
 	return nil
 }
 
@@ -88,6 +105,14 @@ func (self *Storage) Keys(p *trib.Pattern, r *trib.List) error {
 	}
 
 	r.L = ret
+
+	if Logging {
+		log.Printf("Keys(%q, %q) => %d", p.Prefix, p.Suffix, len(r.L))
+		for i, s := range r.L {
+			log.Printf("  %d: %q", i, s)
+		}
+	}
+
 	return nil
 }
 
@@ -103,6 +128,14 @@ func (self *Storage) ListKeys(p *trib.Pattern, r *trib.List) error {
 	}
 
 	r.L = ret
+
+	if Logging {
+		log.Printf("ListKeys(%q, %q) => %d", p.Prefix, p.Suffix, len(r.L))
+		for i, s := range r.L {
+			log.Printf("  %d: %q", i, s)
+		}
+	}
+
 	return nil
 }
 
@@ -116,6 +149,13 @@ func (self *Storage) ListGet(key string, ret *trib.List) error {
 		ret.L = make([]string, 0, lst.Len())
 		for i := lst.Front(); i != nil; i = i.Next() {
 			ret.L = append(ret.L, i.Value.(string))
+		}
+	}
+
+	if Logging {
+		log.Printf("ListGet(%q) => %d", key, len(ret.L))
+		for i, s := range ret.L {
+			log.Printf("  %d: %q", i, s)
 		}
 	}
 
@@ -135,6 +175,11 @@ func (self *Storage) ListAppend(kv *trib.KeyValue, succ *bool) error {
 	lst.PushBack(kv.Value)
 
 	*succ = true
+
+	if Logging {
+		log.Printf("ListAppend(%q, %q)", kv.Key, kv.Value)
+	}
+
 	return nil
 }
 
@@ -164,6 +209,10 @@ func (self *Storage) ListRemove(kv *trib.KeyValue, n *int) error {
 
 	if lst.Len() == 0 {
 		delete(self.lists, kv.Key)
+	}
+
+	if Logging {
+		log.Printf("ListAppend(%q, %q) => %d", kv.Key, kv.Value, *n)
 	}
 
 	return nil

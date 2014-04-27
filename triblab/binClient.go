@@ -17,14 +17,14 @@ func hash(s string) uint32 {
 }
 
 func (self *binClient) Bin(name string) trib.Storage {
-    if backs == nil {
+    if self.backs == nil {
         return nil
     }
     if st, ok := self.indexMap[name]; ok {
         return st
     } else {
-        addr := self.back[Hash(name) % len(backs)]
-        self.indexMap[name] = &attClient{bin:name, client:client{addr: back_addr}}
+        addr := self.backs[hash(name) % uint32(len(self.backs))]
+        self.indexMap[name] = &attClient{bin:name, client:NewClient(addr)}
         return self.indexMap[name]
     }
 }

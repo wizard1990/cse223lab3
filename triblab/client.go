@@ -4,7 +4,6 @@ import (
     "fmt"
     "trib"
     "net/rpc"
-    "hash/fnv"
     "sync"
 )
 
@@ -42,11 +41,16 @@ func (self *client) Get(key string, value *string) error {
     }
 
     *value = ""
+    count := 0
     for e := self.conn.Call("Storage.Get", key, value); e != nil; {
+        if count < CONNECT_TRIALS {
+            return e
+        }
         e = self.Connect(true)
         if e != nil {
             return e
         }
+        count++
     }
     return nil
 }
@@ -56,11 +60,16 @@ func (self *client) Set(kv *trib.KeyValue, succ *bool) error {
         fmt.Println(e)
         return e
     }
+    count := 0
     for e := self.conn.Call("Storage.Set", kv, succ); e != nil; {
+        if count < CONNECT_TRIALS {
+            return e
+        }
         e = self.Connect(true)
         if e != nil {
             return e
         }
+        count++
     }
     return nil
 }
@@ -71,11 +80,16 @@ func (self *client) Keys(p *trib.Pattern, list *trib.List) error {
         return e
     }
     var tmpList *trib.List = &trib.List{[]string{}}
+    count := 0
     for e := self.conn.Call("Storage.Keys", p, tmpList); e != nil; {
+        if count < CONNECT_TRIALS {
+            return e
+        }
         e = self.Connect(true)
         if e != nil {
             return e
         }
+        count++
     }
     *list = *tmpList
     return nil
@@ -86,14 +100,21 @@ func (self *client) ListGet(key string, list *trib.List) error {
         fmt.Println(e)
         return e
     }
-    var tmpList *trib.List = &trib.List{[]string{}} 
-    for e := self.conn.Call("Storage.ListGet", key, tmpList); e != nil; {
+    list.L = nil
+    count := 0
+    for e := self.conn.Call("Storage.ListGet", key, list); e != nil; {
+        if count < CONNECT_TRIALS {
+            return e
+        }
         e = self.Connect(true)
         if e != nil {
             return e
         }
+        count++
     }
-    *list = *tmpList
+    if list.L == nil {
+        list.L = make([]string, 0)
+    }
     return nil
 }
 
@@ -102,11 +123,16 @@ func (self *client) ListAppend(kv *trib.KeyValue, succ *bool) error {
         fmt.Println(e)
         return e
     }
+    count := 0
     for e := self.conn.Call("Storage.ListAppend", kv, succ); e != nil; {
+        if count < CONNECT_TRIALS {
+            return e
+        }
         e = self.Connect(true)
         if e != nil {
             return e
         }
+        count++
     }
     return nil
 }
@@ -116,11 +142,16 @@ func (self *client) ListRemove(kv *trib.KeyValue, n *int) error {
         fmt.Println(e)
         return e
     }
+    count := 0
     for e := self.conn.Call("Storage.ListRemove", kv, n); e != nil; {
+        if count < CONNECT_TRIALS {
+            return e
+        }
         e = self.Connect(true)
         if e != nil {
             return e
         }
+        count++
     }
     return nil
 }
@@ -130,11 +161,20 @@ func (self *client) ListKeys(p *trib.Pattern, list *trib.List) error {
         fmt.Println(e)
         return e
     }
+    list.L = nil
+    count := 0
     for e := self.conn.Call("Storage.ListKeys", p, list); e != nil; {
+        if count > CONNECT_TRIALS {
+            return e
+        }
         e = self.Connect(true)
         if e != nil {
             return e
         }
+        count++
+    }
+    if list.L == nil {
+        list.L = make([]string, 0)
     }
     return nil
 }
@@ -144,11 +184,16 @@ func (self *client) Clock(atLeast uint64, ret *uint64) error {
         fmt.Println(e)
         return e
     }
+    count := 0
     for e := self.conn.Call("Storage.Clock", atLeast, ret); e != nil; {
+        if count > CONNECT_TRIALS {
+            return e
+        }
         e = self.Connect(true)
         if e != nil {
             return e
         }
+        count++
     }
     return nil
 }

@@ -175,7 +175,7 @@
     if (showing === "" || showing === "!home") {
       return;
     }
-    console.log("sigin in as: " + showing);
+    console.log("sign in as: " + showing);
     me = showing;
     $("div#who").show();
     $("div#who h3").html("Signed in as " + me);
@@ -326,8 +326,7 @@
       type: "POST",
       data: JSON.stringify({
         Who: me,
-        Whom: showing,
-        Clock: lclock
+        Whom: showing
       }),
       success: _updateFollow,
       cache: false
@@ -377,7 +376,8 @@
       type: "POST",
       data: JSON.stringify({
         Who: me,
-        Message: text
+        Message: text,
+        Clock: lclock
       }),
       success: postDone,
       cache: false

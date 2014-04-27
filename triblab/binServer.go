@@ -6,6 +6,9 @@ import (
     "sync"
     "encoding/json"
     "strings"
+    "time"
+    "io"
+    "container/heap"
 )
 
 type binServer struct {
@@ -15,7 +18,7 @@ type binServer struct {
 }
 
 //search user from bins
-func (self *Server) findUser(user string) (state, error) {
+func (self *binServer) findUser(user string) (string, error) {
     for _, cachedUser := range self.userCache {
         if user == cachedUser {
             return "1", nil
@@ -24,17 +27,17 @@ func (self *Server) findUser(user string) (state, error) {
     client := self.server.Bin(user)
     res := ""
     if e := client.Get(user, &res); e != nil {
-        return nil, e
+        return "", e
     }
     if len(res) == 0 {
-        return nil, fmt.Errorf("username %q not exists", user)
+        return "", fmt.Errorf("username %q not exists", user)
     }
     return res, nil
 }
 
 //search user from user-list, used for sign up to keep consistency
-func (self *Server) findUserFromList(user string) (bool, error) {
-    userList, e = self.ListAllUsers()
+func (self *binServer) findUserFromList(user string) (bool, error) {
+    userList, e := self.ListAllUsers()
     if(e != nil){
         return false, e
     }
@@ -63,11 +66,12 @@ func (self *binServer) SignUp(user string) error {
     }
 
     client := self.server.Bin(user)
-    if e := client.Set(user, "1"); e != nil {
+    succ := false
+    if e := client.Set(&trib.KeyValue{user, "1"}, &succ); e != nil {
         return e
     }
     client = self.server.Bin("ListUsers")
-    succ := false
+    succ = false
     e = client.ListAppend(&trib.KeyValue{"ListUsers", user}, &succ)
     if (e == nil) && (len(self.userCache) < 20) {
         self.userCache = append(self.userCache, user)
@@ -94,7 +98,7 @@ func (self *binServer) ListUsers() ([]string, error) {
         userList = userList[:20]
     }
     if len(userList) > len(self.userCache) {
-        self.userCache = make([]string, len(userList)
+        self.userCache = make([]string, len(userList))
         copy(self.userCache, userList)
     }
     return userList, nil
@@ -104,12 +108,9 @@ func (self *binServer) Post(who, post string, clock uint64) error {
     if len(post) > trib.MaxTribLen {
         return fmt.Errorf("trib too long")
     }
-    if _, e = self.findUser(who); e != nil {
+    if _, e := self.findUser(who); e != nil {
         return e
     }
-
-    self.lock.Lock()
-    defer self.lock.Unlock()
 
     client := self.server.Bin(who)
     var c uint64
@@ -127,11 +128,11 @@ func (self *binServer) Post(who, post string, clock uint64) error {
     }
     v := string(b)
     succ := false
-    return client.ListAppend(&trib.KeyValue{"Post", value}, &succ)
+    return client.ListAppend(&trib.KeyValue{"Post", v}, &succ)
 }
 
 func (self *binServer) Tribs(user string) ([]*trib.Trib, error) {
-    if _, e = self.findUser(who); e != nil {
+    if _, e := self.findUser(user); e != nil {
         return nil, e
     }
     client := self.server.Bin(user)
@@ -140,7 +141,7 @@ func (self *binServer) Tribs(user string) ([]*trib.Trib, error) {
         return nil, e
     }
 
-    tribList = make([]*trib.Trib, len(plist.L))
+    tribList := make([]*trib.Trib, len(plist.L))
     dec := json.NewDecoder(strings.NewReader(strings.Join(plist.L, "")))
     for i := 0;;i++{
         var m trib.Trib
@@ -155,11 +156,17 @@ func (self *binServer) Tribs(user string) ([]*trib.Trib, error) {
     l := len(tribList)
     if l > trib.MaxTribFetch {
         for i := trib.MaxTribFetch; i < l; i++ {
-            client.List
+            go func(bc trib.Storage, old *trib.Trib) {
+                b, e := json.Marshal(*old)
+                if e != nil {
+                    return
+                }
+                v := string(b)
+                n := 0
+                bc.ListRemove(&trib.KeyValue{"Post", v}, &n)
+            }(client, tribList[i])
         }
-
     }
-    
     return tribList[:l], nil
 }
 
@@ -167,10 +174,10 @@ func (self *binServer) Follow(who, whom string) error {
     if(who == whom) {
         return fmt.Errorf("You cannot follow yourself, narcissist.")
     }
-    if _, e = self.findUser(who); e != nil {
+    if _, e := self.findUser(who); e != nil {
         return e
     }
-    if _, e = self.findUser(whom); e != nil {
+    if _, e := self.findUser(whom); e != nil {
         return e
     }
 
@@ -181,7 +188,7 @@ func (self *binServer) Follow(who, whom string) error {
     if(e != nil){
         return e
     }
-    if(flag){
+    if(b){
         return fmt.Errorf("%q has already followed %q", who, whom)
     }
     
@@ -191,10 +198,10 @@ func (self *binServer) Follow(who, whom string) error {
 }
 
 func (self *binServer) Unfollow(who, whom string) error {
-    if _, e = self.findUser(who); e != nil {
+    if _, e := self.findUser(who); e != nil {
         return e
     }
-    if _, e = self.findUser(whom); e != nil {
+    if _, e := self.findUser(whom); e != nil {
         return e
     }
 
@@ -205,7 +212,7 @@ func (self *binServer) Unfollow(who, whom string) error {
     if(e != nil){
         return e
     }
-    if(!flag){
+    if(!b){
         return fmt.Errorf("%q has not followed %q yet", who, whom)
     }
     
@@ -218,10 +225,10 @@ func (self *binServer) IsFollowing(who, whom string) (bool, error) {
     if who == whom {
         return false, nil
     }
-    if _, e = self.findUser(who); e != nil {
+    if _, e := self.findUser(who); e != nil {
         return false, e
     }
-    if _, e = self.findUser(whom); e != nil {
+    if _, e := self.findUser(whom); e != nil {
         return false, e
     }
 
@@ -238,8 +245,8 @@ func (self *binServer) IsFollowing(who, whom string) (bool, error) {
 }
 
 func (self *binServer) Following(who string) ([]string, error) {
-    if _, e = self.findUser(who); e != nil {
-        return false, e
+    if _, e := self.findUser(who); e != nil {
+        return []string{}, e
     }
     client := self.server.Bin(who)
     fs := trib.List{L:[]string{}}
@@ -247,6 +254,50 @@ func (self *binServer) Following(who string) ([]string, error) {
     return fs.L, e
 }
 
-func (self *binServer) Home(user string) ([]*Trib, error) {
-
+func (self *binServer) Home(user string) ([]*trib.Trib, error) {
+    tribList := []*trib.Trib{}
+    followList, e := self.Following(user)
+    if e != nil {
+        return tribList, e
+    }
+    followList = append(followList, user)
+    //fmt.Println(len(followList))
+    tribCh := make(chan []*trib.Trib, len(followList))
+    for _, userName := range followList {
+        go func(user string) {
+            tbList, e := self.Tribs(user)
+            //fmt.Println("tribs error", e)
+            if e != nil {
+                tribCh <- nil
+            } else {
+                tribCh <- tbList
+            }
+        }(userName)
+    }
+    maxHeap := tribHeap{&ByTime{}, trib.MaxTribFetch}
+    //fmt.Println("start to push into heap")
+    for i := 0; i < len(followList); i++ {
+        tList := <-tribCh
+        //fmt.Println(tList)
+        if tList != nil {
+            for _, tb := range tList {
+                //fmt.Println("push!")
+                heap.Push(&maxHeap, tb)
+            }
+        }
+    }
+    //fmt.Println("start to pop from heap")
+    for len(*maxHeap.sorter) > 0 {
+        newTrib := heap.Pop(&maxHeap)
+        //fmt.Println(newTrib)
+        tribList = append(tribList, newTrib.(*trib.Trib))
+    }
+    //fmt.Println("start clock sync")
+    if len(tribList) > 0 {
+        tribSort(tribList)
+        newestTrib := tribList[len(tribList) - 1]
+        var n uint64 = 0
+        self.server.Bin(user).Clock(newestTrib.Clock, &n)
+    }
+    return tribList, nil
 }

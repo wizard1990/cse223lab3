@@ -4,7 +4,6 @@ import (
     "net/rpc"
     "net/http"
     "net"
-    "fmt"
 	"trib"
     "sync"
 )

@@ -14,7 +14,8 @@ import (
 )
 
 var (
-	frc = flag.String("rc", trib.DefaultRCPath, "bin storage config file")
+	frc     = flag.String("rc", trib.DefaultRCPath, "bin storage config file")
+	verbose = flag.Bool("v", false, "verbose logging")
 )
 
 func noError(e error) {
@@ -25,6 +26,8 @@ func noError(e error) {
 
 func main() {
 	flag.Parse()
+
+	store.Logging = *verbose
 
 	rc, e := trib.LoadRC(*frc)
 	noError(e)

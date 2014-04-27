@@ -1,4 +1,5 @@
-.PHONY: all rall fmt tags test testv lc doc turnin
+.PHONY: all rall fmt tags test testv lc doc \
+	turnin-lab1 turnin-lab2 turnin-lab3 turnin-zip
 
 all:
 	go install ./... trib/...
@@ -24,8 +25,19 @@ lc:
 doc:
 	godoc -http=:8000
 
-turnin:
-	@ echo "Turning in for `whoami`"
+turnin-zip:
 	git archive -o turnin.zip HEAD
 	chmod 600 turnin.zip
+
+turnin-lab1: turnin-zip
+	@ echo "Turning in lab1 for `whoami`"
+	cp turnin.zip /classes/cse223b/sp14/labs/turnin/lab1/`whoami`.zip
+
+turnin-lab2: turnin-zip
+	@ echo "Turning in lab2 for `whoami`"
 	cp turnin.zip /classes/cse223b/sp14/labs/turnin/lab2/`whoami`.zip
+
+turnin-lab3: turnin-zip
+	@ echo "Turning in lab3 for `whoami`"
+	cp turnin.zip /classes/cse223b/sp14/labs/turnin/lab3/`whoami`.zip
+

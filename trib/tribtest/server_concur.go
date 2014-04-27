@@ -76,7 +76,8 @@ func CheckServerConcur(t *testing.T, server trib.Server) {
 			cnt++
 		}
 	}
-	t.Logf("%d followed", cnt)
+	t.Logf("%d follows", cnt)
+	// as(cnt == 1)
 
 	er(server.Follow("user", "other"))
 
@@ -94,7 +95,8 @@ func CheckServerConcur(t *testing.T, server trib.Server) {
 			cnt++
 		}
 	}
-	t.Logf("%d unfollowed", cnt)
+	t.Logf("%d unfollows", cnt)
+	// as(cnt == 1)
 
 	fos, e = server.Following("user")
 	ne(e)

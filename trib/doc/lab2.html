@@ -213,10 +213,12 @@ Following(who string) ([]string, error)
 all following users of a user. A user can never follow or unfollow
 himself. When calling with <code>who</code> equals to <code>whom</code>, the functions
 return error. When the user does not exist, the functions return
-error.</p>
+error. If a user performs <code>Folllow()</code> on another user over multiple
+client concurrently only one <code>Follow()</code> should succeed with no errors.</p>
 
-<p>A user can follow at most <code>trib.MaxFollowing=2000</code> users. Returns
-error when trying to follow more than that.</p>
+<p>A user can follow at most <code>trib.MaxFollowing=2000</code> users (not
+including himself). When a user tries to follow more than
+<code>trib.MasFollowing=2000</code> users, <code>Follow()</code> should return error.</p>
 
 <hr><pre><code>Home(user string) ([]*Trib, error)
 </code></pre>
@@ -555,6 +557,8 @@ saved in the storage.</li>
 <li>Keep multiple caches for the ListUsers() call when the users are
 many. Note that when the user count is more than 20, you don't
 need to track new registered users anymore.</li>
+<li>Keep a log for the users that a user follows, where each log
+entry is an action of <code>Follow()</code> or <code>Unfollow()</code>.</li>
 </ul><h2>
 <a name="user-content-possible-mistakes" class="anchor" href="#possible-mistakes"><span class="octicon octicon-link"></span></a>Possible Mistakes</h2>
 
@@ -582,7 +586,7 @@ might directly use that argument as the new post's clock field.
 Technically, you can do that in your code internally as long as you
 can satisfy the ordering requirements specified for <code>Home()</code> and
 <code>Tribs()</code> (you might find it very hard).  Nonetheless, intuitively,
-the clock argument tells the <em>oldest</em> tribble a user have seen
+the clock argument tells the <em>latest</em> tribble a user have seen
 (which might be 0 if the user has not seen any tribble yet), hence
 the new posted tribble seems to better have a clock value that is
 larger than the argument.</li>

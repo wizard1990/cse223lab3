@@ -169,7 +169,7 @@ signIn = (ev) ->
     if showing == "" || showing == "!home"
         return
 
-    console.log("sigin in as: " + showing)
+    console.log("sign in as: " + showing)
 
     me = showing
     $("div#who").show()
@@ -327,7 +327,6 @@ updateFollow = ->
         data: JSON.stringify({
             Who: me
             Whom: showing
-            Clock: lclock
         })
         success: _updateFollow
         cache: false
@@ -375,6 +374,7 @@ _postTrib = ->
         data: JSON.stringify({
             Who: me
             Message: text
+            Clock: lclock
         })
         success: postDone
         cache: false

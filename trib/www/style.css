@@ -105,7 +105,8 @@ div.right {
     text-align: right;
 }
 
-input#username {
+input#username,
+input#signinas {
     display: inline-block;
     width: 150px;
     border: 1px solid #ccc;
