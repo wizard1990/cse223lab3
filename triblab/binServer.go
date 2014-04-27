@@ -24,9 +24,20 @@ func (self *binServer) findUser(user string) (string, error) {
 			return "1", nil
 		}
 	}
-	client := self.server.Bin(user)
+	clients := self.server.Bin(user)
 	res := ""
-	if e := client.Get(user, &res); e != nil {
+	var res string
+	index := 0
+	clients[0].Get("Completed", &res)
+	if len(res) != 1 {
+		clients[1].Get("Completed", &res)
+		index = 1
+		if len(res) != 1 {
+			clients[2].Get("Completed", &res)
+			index = 2
+		}
+	}
+	if e := clients[index].Get(user, &res); e != nil {
 		return "", e
 	}
 	if len(res) == 0 {
@@ -65,18 +76,32 @@ func (self *binServer) SignUp(user string) error {
 		return fmt.Errorf("user %q already exists", user)
 	}
 
-	client := self.server.Bin(user)
+	clients := self.server.Bin(user)
 	succ := false
-	if e := client.Set(&trib.KeyValue{user, "1"}, &succ); e != nil {
+	if e := clients[0].Set(&trib.KeyValue{user, "1"}, &succ); e != nil {
 		return e
 	}
-	if e := client.Set(&trib.KeyValue{"Completed", "1"}, &succ); e != nil {
+	if e := clients[1].Set(&trib.KeyValue{user, "1"}, &succ); e != nil {
+		return e
+	}
+	if e := clients[2].Set(&trib.KeyValue{user, "1"}, &succ); e != nil {
+		return e
+	}
+	if e := clients[0].Set(&trib.KeyValue{"Completed", "1"}, &succ); e != nil {
+		return e
+	}
+	if e := clients[1].Set(&trib.KeyValue{"Completed", "1"}, &succ); e != nil {
+		return e
+	}
+	if e := clients[2].Set(&trib.KeyValue{"Completed", "1"}, &succ); e != nil {
 		return e
 	}
 
-	client = self.server.Bin("ListUsers")
+	clients = self.server.Bin("ListUsers")
 	succ = false
-	e = client.ListAppend(&trib.KeyValue{"ListUsers", user}, &succ)
+	e = clients[0].ListAppend(&trib.KeyValue{"ListUsers", user}, &succ)
+	e = clients[1].ListAppend(&trib.KeyValue{"ListUsers", user}, &succ)
+	e = clients[2].ListAppend(&trib.KeyValue{"ListUsers", user}, &succ)
 	if (e == nil) && (len(self.userCache) < 20) {
 		self.userCache = append(self.userCache, user)
 	}
@@ -86,7 +111,7 @@ func (self *binServer) SignUp(user string) error {
 func (self *binServer) ListAllUsers() ([]string, error) {
 	client := self.server.Bin("ListUsers")
 	userList := trib.List{L: []string{}}
-	e := client.ListGet("ListUsers", &userList)
+	e := client[0].ListGet("ListUsers", &userList)
 	return userList.L, e
 }
 
@@ -116,9 +141,11 @@ func (self *binServer) Post(who, post string, clock uint64) error {
 		return e
 	}
 
-	client := self.server.Bin(who)
+	clients := self.server.Bin(who)
 	var c uint64
-	client.Clock(clock, &c)
+	clients[0].Clock(clock, &c)
+	clients[1].Clock(clock, &c)
+	clients[2].Clock(clock, &c)
 
 	newTrib := trib.Trib{
 		User:    who,
@@ -132,16 +159,30 @@ func (self *binServer) Post(who, post string, clock uint64) error {
 	}
 	v := string(b)
 	succ := false
-	return client.ListAppend(&trib.KeyValue{"Post", v}, &succ)
+	clients[0].ListAppend(&trib.KeyValue{"Post", v}, &succ)
+	clients[1].ListAppend(&trib.KeyValue{"Post", v}, &succ)
+	clients[2].ListAppend(&trib.KeyValue{"Post", v}, &succ)
+	return nil
 }
 
 func (self *binServer) Tribs(user string) ([]*trib.Trib, error) {
 	if _, e := self.findUser(user); e != nil {
 		return nil, e
 	}
-	client := self.server.Bin(user)
+	clients := self.server.Bin(user)
 	plist := trib.List{L: []string{}}
-	if e := client.ListGet("Post", &plist); e != nil {
+	var res string
+	index := 0
+	clients[0].Get("Completed", &res)
+	if len(res) != 1 {
+		clients[1].Get("Completed", &res)
+		index = 1
+		if len(res) != 1 {
+			clients[2].Get("Completed", &res)
+			index = 2
+		}
+	}
+	if e := clients[index].ListGet("Post", &plist); e != nil {
 		return nil, e
 	}
 
@@ -168,7 +209,7 @@ func (self *binServer) Tribs(user string) ([]*trib.Trib, error) {
 				v := string(b)
 				n := 0
 				bc.ListRemove(&trib.KeyValue{"Post", v}, &n)
-			}(client, tribList[i])
+			}(clients[index], tribList[i])
 		}
 	}
 	return tribList[:l], nil
@@ -196,9 +237,12 @@ func (self *binServer) Follow(who, whom string) error {
 		return fmt.Errorf("%q has already followed %q", who, whom)
 	}
 
-	client := self.server.Bin(who)
+	clients := self.server.Bin(who)
 	succ := false
-	return client.ListAppend(&trib.KeyValue{"Following", whom}, &succ)
+	clients[0].ListAppend(&trib.KeyValue{"Following", whom}, &succ)
+	clients[1].ListAppend(&trib.KeyValue{"Following", whom}, &succ)
+	clients[2].ListAppend(&trib.KeyValue{"Following", whom}, &succ)
+	return nil
 }
 
 func (self *binServer) Unfollow(who, whom string) error {
@@ -220,9 +264,12 @@ func (self *binServer) Unfollow(who, whom string) error {
 		return fmt.Errorf("%q has not followed %q yet", who, whom)
 	}
 
-	client := self.server.Bin(who)
+	clients := self.server.Bin(who)
 	n := 0
-	return client.ListRemove(&trib.KeyValue{"Following", whom}, &n)
+	clients[0].ListRemove(&trib.KeyValue{"Following", whom}, &n)
+	clients[1].ListRemove(&trib.KeyValue{"Following", whom}, &n)
+	clients[2].ListRemove(&trib.KeyValue{"Following", whom}, &n)
+	return nil
 }
 
 func (self *binServer) IsFollowing(who, whom string) (bool, error) {
@@ -252,9 +299,20 @@ func (self *binServer) Following(who string) ([]string, error) {
 	if _, e := self.findUser(who); e != nil {
 		return []string{}, e
 	}
-	client := self.server.Bin(who)
+	clients := self.server.Bin(who)
+	var res string
+	index := 0
+	clients[0].Get("Completed", &res)
+	if len(res) != 1 {
+		clients[1].Get("Completed", &res)
+		index = 1
+		if len(res) != 1 {
+			clients[2].Get("Completed", &res)
+			index = 2
+		}
+	}
 	fs := trib.List{L: []string{}}
-	e := client.ListGet("Following", &fs)
+	e := clients[index].ListGet("Following", &fs)
 	return fs.L, e
 }
 
@@ -301,7 +359,10 @@ func (self *binServer) Home(user string) ([]*trib.Trib, error) {
 		tribSort(tribList)
 		newestTrib := tribList[len(tribList)-1]
 		var n uint64 = 0
-		self.server.Bin(user).Clock(newestTrib.Clock, &n)
+		clients := self.server.Bin(user)
+		clients[0].Clock(newestTrib.Clock, &n)
+		clients[1].Clock(newestTrib.Clock, &n)
+		clients[2].Clock(newestTrib.Clock, &n)
 	}
 	return tribList, nil
 }

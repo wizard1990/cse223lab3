@@ -3,11 +3,30 @@ package triblab
 import (
     "trib"
     "hash/fnv"
+    "sort"
 )
 
 type binClient struct {
     backs []string
-    indexMap map[string]trib.Storage
+    indexMap map[string]int
+}
+
+type ByHashValue []string
+
+func (a ByHashValue) Len() int {
+    return len(a)
+}
+
+func (a ByHashValue) Swap(i, j int) {
+    a[i], a[j] = a[j], a[i]
+}
+
+func (a ByHashValue) Less(i, j int) bool {
+    return hash(a[i]) < hash(a[j])
+}
+
+func (self *binClient) Init() {
+    sort.Sort(ByHashValue(self.backs))
 }
 
 func hash(s string) uint32 {
@@ -16,15 +35,52 @@ func hash(s string) uint32 {
     return h.Sum32()
 }
 
-func (self *binClient) Bin(name string) trib.Storage {
+func (self *binClient) Bin(name string) []trib.Storage {
     if self.backs == nil {
         return nil
     }
-    if st, ok := self.indexMap[name]; ok {
-        return st
+
+    var startIndex int
+    size := len(self.backs)
+    if index, ok := self.indexMap[name]; ok {
+        startIndex = index
     } else {
-        addr := self.backs[hash(name) % uint32(len(self.backs))]
-        self.indexMap[name] = &attClient{bin:name, client:NewClient(addr)}
-        return self.indexMap[name]
+        hashValue := hash(name)
+        for startIndex = 0; startIndex < size; startIndex++ {
+            if hash(self.backs[startIndex]) > hashValue {
+                startIndex--
+                break
+            }
+        }
+        if startIndex < 0 || startIndex >= size {
+            startIndex = size - 1
+        }
+        self.indexMap[name] = startIndex
+        // self.indexMap[name] = &attClient{bin:name, client:NewClient(addr)}
+        // return self.indexMap[name]
+    }
+
+    count := 0
+    result := make([]trib.Storage, 3)
+    for ;count < 3; {
+        if result[count] = self.checkAddr(name, self.backs[startIndex]); result[count] != nil {
+             count++
+        }
+        startIndex++
+        if startIndex >= size {
+            startIndex = 0
+        }
+    }
+    return result
+}
+
+func (self *binClient) checkAddr(binName string, addr string) trib.Storage {
+    client := &attClient{bin:binName, client:NewClient(addr)}
+    list := trib.List{[]string{}}
+    err := client.Keys(&trib.Pattern{"", "Completed"}, &list)
+    if err == nil {
+        return client
+    } else {
+        return nil
     }
 }
