@@ -17,7 +17,7 @@ type binKeeper struct {
 
 	//Xintian Args for replicate
 	clientMap map[string]trib.Storage
-	bc trib.BinStorage
+	bc        trib.BinStorage
 	//End Xintian
 
 	Keeper_addrs []string // Keepers peers' addr not included myself
@@ -42,8 +42,8 @@ func NewKeeper(kc *trib.KeeperConfig) *binKeeper {
 	copy(keeper.backs, kc.Backs)
 
 	//Xintian for replicate
-	for _,addr := range kc.Backs{
-    keeper.clientMap[addr] = &client{addr:addr}
+	for _, addr := range kc.Backs {
+		keeper.clientMap[addr] = &client{addr: addr}
 	}
 	keeper.bc = &binClient{backs: kc.Backs}
 	//End Xintian
