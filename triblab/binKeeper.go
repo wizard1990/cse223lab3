@@ -2,13 +2,15 @@ package triblab
 
 import (
 	"fmt"
+	"sync"
 	"time"
 	"trib"
 )
 
 type binKeeper struct {
-	backs []string
-	Ready chan<- bool
+	backs    []string
+	Ready    chan<- bool
+	bin_lock sync.Mutex
 }
 
 func NewKeeper(kc *trib.KeeperConfig) *binKeeper {
