@@ -1,7 +1,7 @@
 package triblab
 
 import (
-	"fmt"
+	//	"fmt"
 	"hash/fnv"
 	"sort"
 	"trib"
@@ -76,17 +76,9 @@ func (self *binClient) Bin(name string) trib.Storage {
 }
 
 func (self *binClient) checkAddr(addr string) trib.Storage {
-	fmt.Println(addr)
 	client := NewClient(addr)
 	list := trib.List{[]string{}}
 	err := client.Keys(&trib.Pattern{"", "Completed"}, &list)
-	var g uint64
-	client = NewClient(addr)
-	e := client.Clock(1000, &g)
-	fmt.Println("Clock", g)
-	fmt.Println("Client", e)
-
-	fmt.Println("Bin", err)
 	if err == nil {
 		return client
 	} else {
