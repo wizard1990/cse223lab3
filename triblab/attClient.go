@@ -14,37 +14,27 @@ func genPrefix(s string) string {
 	return colon.Escape(s) + "::"
 }
 
-func SplitClock(str string) (uint64, string) {
-	return 0, ""
-
-}
-func FindLargestClock(l1 *trib.List, l2 *trib.List, l3 *trib.List) (uint64, *trib.List, string) {
-	max_collect := make(map[uint64]string)
-
-	return 0, nil, ""
-}
-
 func (self *attClient) Get(key string, value *string) error {
-    res0 := trib.List{[]string{}}
-    res1 := trib.List{[]string{}}
-    res2 := trib.List{[]string{}}
-    self.client[0].ListGet(genPrefix(self.bin) + key + "::KV", &res0)
-    self.client[1].ListGet(genPrefix(self.bin) + key + "::KV", &res1)
-    self.client[2].ListGet(genPrefix(self.bin) + key + "::KV", &res2)
-    clk, res ,ele := FindLargestClock(&res0, &res1, &res2)
+	res0 := trib.List{[]string{}}
+	res1 := trib.List{[]string{}}
+	res2 := trib.List{[]string{}}
+	self.client[0].ListGet(genPrefix(self.bin)+key+"::KV", &res0)
+	self.client[1].ListGet(genPrefix(self.bin)+key+"::KV", &res1)
+	self.client[2].ListGet(genPrefix(self.bin)+key+"::KV", &res2)
+	clk, res, ele := FindLargestClock(&res0, &res1, &res2)
 
-    *value = ele
-    return nil
+	*value = ele
+	return nil
 }
 
 func (self *attClient) Set(kv *trib.KeyValue, succ *bool) error {
-    res0 := trib.List{[]string{}}
-    res1 := trib.List{[]string{}}
-    res2 := trib.List{[]string{}}
-    self.client[0].ListGet(genPrefix(self.bin) + kv.Key + "::KV", &res0)
-    self.client[1].ListGet(genPrefix(self.bin) + kv.Key + "::KV", &res1)
-    self.client[2].ListGet(genPrefix(self.bin) + kv.Key + "::KV", &res2)
-    clk, res , ele := FindLargestClock(&res0, &res1, &res2)
+	res0 := trib.List{[]string{}}
+	res1 := trib.List{[]string{}}
+	res2 := trib.List{[]string{}}
+	self.client[0].ListGet(genPrefix(self.bin)+kv.Key+"::KV", &res0)
+	self.client[1].ListGet(genPrefix(self.bin)+kv.Key+"::KV", &res1)
+	self.client[2].ListGet(genPrefix(self.bin)+kv.Key+"::KV", &res2)
+	clk, res, ele := FindLargestClock(&res0, &res1, &res2)
 
     n := 0
 	for i := 0; i < 3; i++ {
