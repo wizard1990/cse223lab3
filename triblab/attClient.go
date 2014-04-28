@@ -15,35 +15,35 @@ func genPrefix(s string) string {
 }
 
 func (self *attClient) Get(key string, value *string) error {
-	res0 := trib.List{[]string{}}
-	res1 := trib.List{[]string{}}
-	res2 := trib.List{[]string{}}
-	self.client[0].ListGet(genPrefix(self.bin)+key+"::KV", &res0)
-	self.client[1].ListGet(genPrefix(self.bin)+key+"::KV", &res1)
-	self.client[2].ListGet(genPrefix(self.bin)+key+"::KV", &res2)
-	clk, res, ele := FindLargestClock(&res0, &res1, &res2)
+	// res0 := trib.List{[]string{}}
+	// res1 := trib.List{[]string{}}
+	// res2 := trib.List{[]string{}}
+	// self.client[0].ListGet(genPrefix(self.bin)+key+"::KV", &res0)
+	// self.client[1].ListGet(genPrefix(self.bin)+key+"::KV", &res1)
+	// self.client[2].ListGet(genPrefix(self.bin)+key+"::KV", &res2)
+	// clk, res, ele := FindLargestClock(&res0, &res1, &res2)
 
-	*value = ele
+	// *value = ele
 	return nil
 }
 
 func (self *attClient) Set(kv *trib.KeyValue, succ *bool) error {
-	res0 := trib.List{[]string{}}
-	res1 := trib.List{[]string{}}
-	res2 := trib.List{[]string{}}
-	self.client[0].ListGet(genPrefix(self.bin)+kv.Key+"::KV", &res0)
-	self.client[1].ListGet(genPrefix(self.bin)+kv.Key+"::KV", &res1)
-	self.client[2].ListGet(genPrefix(self.bin)+kv.Key+"::KV", &res2)
-	clk, res, ele := FindLargestClock(&res0, &res1, &res2)
+	// res0 := trib.List{[]string{}}
+	// res1 := trib.List{[]string{}}
+	// res2 := trib.List{[]string{}}
+	// self.client[0].ListGet(genPrefix(self.bin)+kv.Key+"::KV", &res0)
+	// self.client[1].ListGet(genPrefix(self.bin)+kv.Key+"::KV", &res1)
+	// self.client[2].ListGet(genPrefix(self.bin)+kv.Key+"::KV", &res2)
+	// clk, res, ele := FindLargestClock(&res0, &res1, &res2)
 
-    n := 0
-	for i := 0; i < 3; i++ {
-        t := 0
-        self.client.Clock(clk, &t)
-        if t > n {
-            n = t
-        }
-	}
+ //    n := 0
+	// for i := 0; i < 3; i++ {
+ //        t := 0
+ //        self.client.Clock(clk, &t)
+ //        if t > n {
+ //            n = t
+ //        }
+	// }
     //self.client[i].Set(&trib.KeyValue{genPrefix(self.bin) + kv.Key, kv.Value}, succ)
 	return nil
 }
