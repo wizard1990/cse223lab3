@@ -14,16 +14,18 @@ func genPrefix(s string) string {
     return colon.Escape(s) + "::"
 }
 
+func FindLargestClock(l1 *trib.List, l2 *trib.List, l3 *trib.List) {
+    
+}
+
 func (self *attClient) Get(key string, value *string) error {
-    res := ""
-    index := 0
-    for i := 0; i < 3; i++ {
-        self.client[i].Get(genPrefix(self.bin) + "Completed", &res)
-        if len(res) == 1 {
-            index = i
-            break
-        }
-    }
+    res0 := trib.List([]string{})
+    res1 := trib.List([]string{})
+    res2 := trib.List([]string{})
+    self.client[0].ListGet(genPrefix(self.bin) + key + "::KV", &res0)
+    self.client[1].ListGet(genPrefix(self.bin) + key + "::KV", &res1)
+    self.client[2].ListGet(genPrefix(self.bin) + key + "::KV", &res2)
+    clock, res , index := FindLargestClock(res0, res1, res2)
     return self.client[index].Get(genPrefix(self.bin) + key, value)
 }
 
