@@ -47,10 +47,12 @@ func NewKeeper(kc *trib.KeeperConfig) *binKeeper {
 	//Cancel by Tao
 	//Plz don't commit error code
 
-	keeper.bc = NewKeeperClient(kc.Backs) // keeper client
-	for _,addr := range keeper.backs{
-    keeper.clientMap[addr] = &client{addr:addr}
-	}
+	/*
+		keeper.bc = NewKeeperClient(kc.Backs) // keeper client
+		for _,addr := range keeper.backs{
+	    keeper.clientMap[addr] = &client{addr:addr}
+		}
+	*/
 	//End Xintian
 
 	return &keeper
