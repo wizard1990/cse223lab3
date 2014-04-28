@@ -46,9 +46,15 @@ func (self *attClient) Set(kv *trib.KeyValue, succ *bool) error {
     self.client[2].ListGet(genPrefix(self.bin) + kv.Key + "::KV", &res2)
     clk, res , ele := FindLargestClock(&res0, &res1, &res2)
 
+    n := 0
 	for i := 0; i < 3; i++ {
-		self.client[i].Set(&trib.KeyValue{genPrefix(self.bin) + kv.Key, kv.Value}, succ)
+        t := 0
+        self.client.Clock(clk, &t)
+        if t > n {
+            n = t
+        }
 	}
+    //self.client[i].Set(&trib.KeyValue{genPrefix(self.bin) + kv.Key, kv.Value}, succ)
 	return nil
 }
 
