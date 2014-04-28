@@ -25,7 +25,12 @@ func (self *attClient) Get(key string, value *string) error {
     self.client[0].ListGet(genPrefix(self.bin) + key + "::KV", &res0)
     self.client[1].ListGet(genPrefix(self.bin) + key + "::KV", &res1)
     self.client[2].ListGet(genPrefix(self.bin) + key + "::KV", &res2)
-    clock, res , index := FindLargestClock(res0, res1, res2)
+
+    clk, res , ele := FindLargestClock(res0, res1, res2)
+    for i := 0; i < 3; i++ {
+        n := 0
+        self.client[i].Clock(clk, &n)
+    }
     return self.client[index].Get(genPrefix(self.bin) + key, value)
 }
 
