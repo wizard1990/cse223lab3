@@ -31,8 +31,8 @@ func (self *binKeeper) Replicate_bin() error{
 func (self *binKeeper) update(key string, bins []trib.Storage) error{
 
 	lists := make([]trib.List,3)
-	for i,b := range bins{
-    b.ListGet(key,&lists[i])
+	for i,_ := range bins{
+    bins[i].ListGet(key,&lists[i])
 	}
 	_,maxSet,_ := FindLargestClock(&lists[0],&lists[1],&lists[2])
 
