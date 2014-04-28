@@ -21,8 +21,40 @@ func AddClock(clock uint64, str string) string {
 	return str
 }
 
-func DiffList(l1, l2 *trib.List) *trib.List {
-	return nil
+func DiffList(from, to *trib.List) *trib.List {
+	count := 0
+	for _, m := range from.L {
+		found := false
+		for _, n := range to.L {
+			if m == n {
+				found = true
+				break
+			}
+		}
+		if !found {
+			count++
+		}
+	}
+
+	new_triblist := trib.List{}
+	new_triblist.L = make([]string, count)
+
+	i := 0
+	for _, m := range from.L {
+		found := false
+		for _, n := range to.L {
+			if m == n {
+				found = true
+				break
+			}
+		}
+		if !found {
+			new_triblist.L[i] = m
+			i++
+		}
+
+	}
+	return &new_triblist
 	/*
 		L := make([]*trib.List, 2)
 		L[0] = l1
