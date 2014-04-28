@@ -50,8 +50,8 @@ func NewKeeper(kc *trib.KeeperConfig) *binKeeper {
 	keeper.bc = NewKeeperClient(kc.Backs) // keeper client
 
 	keeper.clientMap = make(map[string]trib.Storage)
-	for _, addr := range keeper.backs {
-		keeper.clientMap[addr] = &client{addr: addr}
+	for _,addr := range keeper.backs{
+    keeper.clientMap[addr] = &client{addr:addr}
 	}
 	//End Xintian
 

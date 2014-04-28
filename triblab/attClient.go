@@ -67,6 +67,7 @@ func (self *attClient) Keys(p *trib.Pattern, list *trib.List) error {
 	for i, s := range list.L {
 		list.L[i] = s[len(genPrefix(self.bin)):]
 		list.L[i] = list.L[i][:len(list.L[i]) - 4]
+		fmt.Println(list.L)
 	}
 	return nil
 }
