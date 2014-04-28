@@ -3,19 +3,27 @@ package triblab
 import (
 	"fmt"
 	"trib"
+	"strings"
 )
 
 func (self *binKeeper) Replicate_bin() error {
 	index := 0
-	suffix := "::kv"
+	var suffix string
 
 	for {
 		backend := self.clientMap[self.backs[index]]
 		users := trib.List{[]string{}}
 
+		suffix = "kv"
 		e := backend.Keys(&(trib.Pattern{Suffix: suffix}), &users)
 		if e == nil {
-			e = self.updateAll(users.L)
+			self.updateAll(users.L, suffix)
+		}
+
+		suffix = "L"
+		e = backend.Keys(&(trib.Pattern{Suffix: suffix}), &users)
+		if e == nil{
+		  self.updateAll(users.L, suffix)
 		}
 
 		index++
@@ -45,18 +53,17 @@ func (self *binKeeper) update(key string, bins []trib.Storage) error {
 	return nil
 }
 
-func (self *binKeeper) updateAll(users []string) error {
+func (self *binKeeper) updateAll(users []string, suffix string) error {
 
 	for _, binName := range users {
-		binName = binName[:len(binName)-5]
+		binName = strings.TrimRight(binName, "::" + suffix)
 		//TrimRight
 		if self.start_audit_bin(binName) == false {
 			self.end_audit_bin(binName)
 			continue
 		}
 		binsToAudit := self.bc.KeeperBin(binName)
-		self.update("kv", binsToAudit)
-		self.update("L", binsToAudit)
+		self.update(suffix, binsToAudit)
 
 		//update username key-value
 		self.end_audit_bin(binName)
