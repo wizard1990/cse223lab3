@@ -64,6 +64,7 @@ func NewKeeper(kc *trib.KeeperConfig) *binKeeper {
 func (self *binKeeper) send_clock_sync(addr string, c uint64) error {
 	rpc := NewClient(addr)
 	var cret uint64
+	c = self.MaxCount
 	fmt.Println(addr, c)
 	e := rpc.Clock(c, &cret)
 
@@ -81,10 +82,9 @@ func (self *binKeeper) clock_sync() error {
 	for {
 		for _, addr := range self.backs {
 			go self.send_clock_sync(
-				addr, self.MaxCount)
+				addr, 0)
 		}
 		time.Sleep(1 * time.Second)
 	}
 	return nil
-
 }
