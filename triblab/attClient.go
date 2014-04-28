@@ -1,7 +1,7 @@
 package triblab
 
 import (
-	"fmt"
+	//	"fmt"
 	"trib"
 	"trib/colon"
 )
@@ -32,8 +32,7 @@ func (self *attClient) Set(kv *trib.KeyValue, succ *bool) error {
 	res0 := trib.List{[]string{}}
 	res1 := trib.List{[]string{}}
 	res2 := trib.List{[]string{}}
-	e := self.client[0].ListGet(genPrefix(self.bin)+kv.Key+"::KV", &res0)
-	fmt.Println(e)
+	self.client[0].ListGet(genPrefix(self.bin)+kv.Key+"::KV", &res0)
 	self.client[1].ListGet(genPrefix(self.bin)+kv.Key+"::KV", &res1)
 	self.client[2].ListGet(genPrefix(self.bin)+kv.Key+"::KV", &res2)
 	clk, _, _ := FindLargestClock(&res0, &res1, &res2)
@@ -47,10 +46,8 @@ func (self *attClient) Set(kv *trib.KeyValue, succ *bool) error {
 		}
 	}
 	for i := 0; i < 3; i++ {
-		succ := false
-		e := self.client[i].ListAppend(&trib.KeyValue{genPrefix(self.bin) + kv.Key + "::KV", AddClock(n, kv.Value)}, &succ)
-		fmt.Println(e)
-		fmt.Println(succ)
+		*succ = false
+		self.client[i].ListAppend(&trib.KeyValue{genPrefix(self.bin) + kv.Key + "::KV", AddClock(n, kv.Value)}, succ)
 	}
 	return nil
 }
@@ -66,8 +63,8 @@ func (self *attClient) Keys(p *trib.Pattern, list *trib.List) error {
 	list.L = (MergeKeyList(&res0, &res1, &res2)).L
 	for i, s := range list.L {
 		list.L[i] = s[len(genPrefix(self.bin)):]
-		list.L[i] = list.L[i][:len(list.L[i]) - 4]
-		fmt.Println(list.L)
+		list.L[i] = list.L[i][:len(list.L[i])-4]
+		//fmt.Println(list.L)
 	}
 	return nil
 }
@@ -125,7 +122,7 @@ func (self *attClient) ListRemove(kv *trib.KeyValue, n *int) error {
 	for _, v := range res.L {
 		if _, tv := SplitClock(v); tv == kv.Value {
 			for i := 0; i < 3; i++ {
-				self.client[0].ListRemove(&trib.KeyValue{genPrefix(self.bin) + kv.Key + "::L", v}, &t)
+				self.client[i].ListRemove(&trib.KeyValue{genPrefix(self.bin) + kv.Key + "::L", v}, &t)
 			}
 			resCnt++
 		}
@@ -146,7 +143,7 @@ func (self *attClient) ListKeys(p *trib.Pattern, list *trib.List) error {
 	list.L = (MergeKeyList(&res0, &res1, &res2)).L
 	for i, s := range list.L {
 		list.L[i] = s[len(genPrefix(self.bin)):]
-		list.L[i] = list.L[i][:len(list.L[i]) - 3]
+		list.L[i] = list.L[i][:len(list.L[i])-3]
 	}
 	return nil
 }
