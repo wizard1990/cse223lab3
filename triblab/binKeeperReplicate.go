@@ -74,7 +74,7 @@ func (self *binKeeper) updateAll(userKey []string) error{
 			self.end_audit_bin(binName)
 			continue
 		}
-		binsToAudit := self.bc.Bin(binName)
+		binsToAudit := self.bc.KeeperBin(binName)
 //binsToAudit := []trib.Storage{}
 		validBins := []trib.Storage{}
 		invalidBins := []trib.Storage{}
