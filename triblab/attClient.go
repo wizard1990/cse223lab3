@@ -3,6 +3,7 @@ package triblab
 import (
 	"trib"
 	"trib/colon"
+    "strconv"
 )
 
 type attClient struct {
@@ -15,103 +16,129 @@ func genPrefix(s string) string {
 }
 
 func (self *attClient) Get(key string, value *string) error {
-	// res0 := trib.List{[]string{}}
-	// res1 := trib.List{[]string{}}
-	// res2 := trib.List{[]string{}}
-	// self.client[0].ListGet(genPrefix(self.bin)+key+"::KV", &res0)
-	// self.client[1].ListGet(genPrefix(self.bin)+key+"::KV", &res1)
-	// self.client[2].ListGet(genPrefix(self.bin)+key+"::KV", &res2)
-	// clk, res, ele := FindLargestClock(&res0, &res1, &res2)
+	res0 := trib.List{[]string{}}
+	res1 := trib.List{[]string{}}
+	res2 := trib.List{[]string{}}
+	self.client[0].ListGet(genPrefix(self.bin)+key+"::KV", &res0)
+	self.client[1].ListGet(genPrefix(self.bin)+key+"::KV", &res1)
+	self.client[2].ListGet(genPrefix(self.bin)+key+"::KV", &res2)
+	clk, res, ele := FindLargestClock(&res0, &res1, &res2)
 
-	// *value = ele
+	*value = ele
 	return nil
 }
 
 func (self *attClient) Set(kv *trib.KeyValue, succ *bool) error {
-	// res0 := trib.List{[]string{}}
-	// res1 := trib.List{[]string{}}
-	// res2 := trib.List{[]string{}}
-	// self.client[0].ListGet(genPrefix(self.bin)+kv.Key+"::KV", &res0)
-	// self.client[1].ListGet(genPrefix(self.bin)+kv.Key+"::KV", &res1)
-	// self.client[2].ListGet(genPrefix(self.bin)+kv.Key+"::KV", &res2)
-	// clk, res, ele := FindLargestClock(&res0, &res1, &res2)
+	res0 := trib.List{[]string{}}
+	res1 := trib.List{[]string{}}
+	res2 := trib.List{[]string{}}
+	self.client[0].ListGet(genPrefix(self.bin)+kv.Key+"::KV", &res0)
+	self.client[1].ListGet(genPrefix(self.bin)+kv.Key+"::KV", &res1)
+	self.client[2].ListGet(genPrefix(self.bin)+kv.Key+"::KV", &res2)
+	clk, res, ele := FindLargestClock(&res0, &res1, &res2)
 
- //    n := 0
-	// for i := 0; i < 3; i++ {
- //        t := 0
- //        self.client.Clock(clk, &t)
- //        if t > n {
- //            n = t
- //        }
-	// }
-    //self.client[i].Set(&trib.KeyValue{genPrefix(self.bin) + kv.Key, kv.Value}, succ)
+    var n uint64
+	for i := 0; i < 3; i++ {
+        var t uint64
+        self.client[i].Clock(clk, &t)
+        if t > n {
+            n = t
+        }
+	}
+    for i := 0; i < 3; i++ {
+        succ := false
+        self.client[i].ListAppend(&trib.KeyValue{genPrefix(self.bin) + kv.Key + "::KV", AddClock(n, kv.Value)}, &succ)
+    }
 	return nil
 }
 
 func (self *attClient) Keys(p *trib.Pattern, list *trib.List) error {
-	res := ""
-	index := 0
-	for i := 0; i < 3; i++ {
-		self.client[i].Get(genPrefix(self.bin)+"Completed", &res)
-		if len(res) == 1 {
-			index = i
-			break
-		}
-	}
-	np := trib.Pattern{genPrefix(self.bin) + p.Prefix, p.Suffix}
-	if e := self.client[index].Keys(&np, list); e != nil {
-		return e
-	}
+	np := trib.Pattern{genPrefix(self.bin) + p.Prefix, p.Suffix + "::KV"}
+    res0 := trib.List{[]string{}}
+    res1 := trib.List{[]string{}}
+    res2 := trib.List{[]string{}}
+    self.client[0].ListKeys(np, &res0)
+    self.client[1].ListKeys(np, &res1)
+    self.client[2].ListKeys(np, &res2)
+	list.L = (MergeKeyList(l1 *trib.List, l2 *trib.List, l3 *trib.List)).L
 	for i, s := range list.L {
-		list.L[i] = s[len(genPrefix(self.bin)):]
-	}
+        list.L[i] = s[len(genPrefix(self.bin)):]
+    }
 	return nil
 }
 
 func (self *attClient) ListGet(key string, list *trib.List) error {
-	res := ""
-	index := 0
-	for i := 0; i < 3; i++ {
-		self.client[i].Get(genPrefix(self.bin)+"Completed", &res)
-		if len(res) == 1 {
-			index = i
-			break
-		}
-	}
-	return self.client[index].ListGet(genPrefix(self.bin)+key, list)
+	res0 := trib.List{[]string{}}
+    res1 := trib.List{[]string{}}
+    res2 := trib.List{[]string{}}
+    self.client[0].ListGet(genPrefix(self.bin)+key+"::L", &res0)
+    self.client[1].ListGet(genPrefix(self.bin)+key+"::L", &res1)
+    self.client[2].ListGet(genPrefix(self.bin)+key+"::L", &res2)
+    clk, res, ele := FindLargestClock(&res0, &res1, &res2)
+    list.L = res.L
+	return nil
 }
 
 func (self *attClient) ListAppend(kv *trib.KeyValue, succ *bool) error {
-	for i := 0; i < 3; i++ {
-		self.client[i].ListAppend(&trib.KeyValue{genPrefix(self.bin) + kv.Key, kv.Value}, succ)
-	}
+    res0 := trib.List{[]string{}}
+    res1 := trib.List{[]string{}}
+    res2 := trib.List{[]string{}}
+    self.client[0].ListGet(genPrefix(self.bin)+key+"::L", &res0)
+    self.client[1].ListGet(genPrefix(self.bin)+key+"::L", &res1)
+    self.client[2].ListGet(genPrefix(self.bin)+key+"::L", &res2)
+    clk, res, ele := FindLargestClock(&res0, &res1, &res2)
+
+    var n uint64
+    for i := 0; i < 3; i++ {
+        var t uint64
+        self.client[i].Clock(clk, &t)
+        if t > n {
+            n = t
+        }
+    }
+    for i := 0; i < 3; i++ {
+        succ := false
+        self.client[i].ListAppend(&trib.KeyValue{genPrefix(self.bin) + kv.Key + "::L", AddClock(n, kv.Value)}, &succ)
+    }
 	return nil
 }
 
 func (self *attClient) ListRemove(kv *trib.KeyValue, n *int) error {
-	for i := 0; i < 3; i++ {
-		self.client[i].ListRemove(&trib.KeyValue{genPrefix(self.bin) + kv.Key, kv.Value}, n)
-	}
+    res0 := trib.List{[]string{}}
+    res1 := trib.List{[]string{}}
+    res2 := trib.List{[]string{}}
+    self.client[0].ListGet(genPrefix(self.bin)+key+"::L", &res0)
+    self.client[1].ListGet(genPrefix(self.bin)+key+"::L", &res1)
+    self.client[2].ListGet(genPrefix(self.bin)+key+"::L", &res2)
+    clk, res, ele := FindLargestClock(&res0, &res1, &res2)
+
+    int resCnt := 0
+    int t := 0
+    for _, v := range res.L {
+        if _, tv := SplitClock(v); tv == kv.Value {
+            for i := 0; i < 3; i++ {
+                self.client[0].ListRemove((&trib.KeyValue{genPrefix(self.bin) + kv.Key + "::L", v}, &t)
+            }
+            resCnt++;
+        }
+    }
+    *n = resCnt
 	return nil
 }
 
 func (self *attClient) ListKeys(p *trib.Pattern, list *trib.List) error {
-	res := ""
-	index := 0
-	for i := 0; i < 3; i++ {
-		self.client[i].Get(genPrefix(self.bin)+"Completed", &res)
-		if len(res) == 1 {
-			index = i
-			break
-		}
-	}
-	np := trib.Pattern{genPrefix(self.bin) + p.Prefix, p.Suffix}
-	if e := self.client[index].ListKeys(&np, list); e != nil {
-		return e
-	}
-	for i, s := range list.L {
-		list.L[i] = s[len(genPrefix(self.bin)):]
-	}
+	np := trib.Pattern{genPrefix(self.bin) + p.Prefix, p.Suffix + "::L"}
+    res0 := trib.List{[]string{}}
+    res1 := trib.List{[]string{}}
+    res2 := trib.List{[]string{}}
+    self.client[0].ListKeys(np, &res0)
+    self.client[1].ListKeys(np, &res1)
+    self.client[2].ListKeys(np, &res2)
+	
+	list.L = (MergeKeyList(l1 *trib.List, l2 *trib.List, l3 *trib.List)).L
+    for i, s := range list.L {
+        list.L[i] = s[len(genPrefix(self.bin)):]
+    }
 	return nil
 }
 
