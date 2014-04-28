@@ -31,7 +31,6 @@ func (self *client) Connect(reconnect bool) error {
 	if e != nil {
 		fmt.Println(e)
 	}
-	self.conn.Close()
 	return e
 }
 
