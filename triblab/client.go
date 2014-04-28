@@ -7,7 +7,7 @@ import (
 	"trib"
 )
 
-var CONNECT_TRIALS int = 5
+var CONNECT_TRIALS int = 1
 
 type client struct {
 	addr string
@@ -31,6 +31,7 @@ func (self *client) Connect(reconnect bool) error {
 	if e != nil {
 		fmt.Println(e)
 	}
+	self.conn.Close()
 	return e
 }
 
@@ -52,6 +53,7 @@ func (self *client) Get(key string, value *string) error {
 		}
 		count++
 	}
+	self.conn.Close()
 	return nil
 }
 
@@ -71,6 +73,7 @@ func (self *client) Set(kv *trib.KeyValue, succ *bool) error {
 		}
 		count++
 	}
+	self.conn.Close()
 	return nil
 }
 
@@ -92,6 +95,7 @@ func (self *client) Keys(p *trib.Pattern, list *trib.List) error {
 		count++
 	}
 	*list = *tmpList
+	self.conn.Close()
 	return nil
 }
 
@@ -115,6 +119,7 @@ func (self *client) ListGet(key string, list *trib.List) error {
 	if list.L == nil {
 		list.L = make([]string, 0)
 	}
+	self.conn.Close()
 	return nil
 }
 
@@ -134,6 +139,7 @@ func (self *client) ListAppend(kv *trib.KeyValue, succ *bool) error {
 		}
 		count++
 	}
+	self.conn.Close()
 	return nil
 }
 
@@ -153,6 +159,7 @@ func (self *client) ListRemove(kv *trib.KeyValue, n *int) error {
 		}
 		count++
 	}
+	self.conn.Close()
 	return nil
 }
 
@@ -176,6 +183,7 @@ func (self *client) ListKeys(p *trib.Pattern, list *trib.List) error {
 	if list.L == nil {
 		list.L = make([]string, 0)
 	}
+	self.conn.Close()
 	return nil
 }
 
@@ -195,5 +203,6 @@ func (self *client) Clock(atLeast uint64, ret *uint64) error {
 		}
 		count++
 	}
+	self.conn.Close()
 	return nil
 }

@@ -103,7 +103,7 @@ func (self *attClient) ListKeys(p *trib.Pattern, list *trib.List) error {
 
 func (self *attClient) Clock(atLeast uint64, ret *uint64) error {
     for i := 0; i < 3; i++ {
-        return self.client[i].Clock(atLeast, ret)
+        self.client[i].Clock(atLeast, ret)
     }
     return nil
 }
