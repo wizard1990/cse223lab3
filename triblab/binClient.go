@@ -35,7 +35,7 @@ func hash(s string) uint32 {
     return h.Sum32()
 }
 
-func (self *binClient) Bin(name string) []trib.Storage {
+func (self *binClient) Bin(name string) trib.Storage {
     if self.backs == nil {
         return nil
     }
@@ -61,9 +61,9 @@ func (self *binClient) Bin(name string) []trib.Storage {
     }
 
     count := 0
-    result := make([]trib.Storage, 3)
+    result := &attClient{bin:name, client:make([]trib.Storage, 3)}
     for ;count < 3; {
-        if result[count] = self.checkAddr(name, self.backs[startIndex]); result[count] != nil {
+        if result.client[count] = self.checkAddr(self.backs[startIndex]); result.client[count] != nil {
              count++
         }
         startIndex++
@@ -74,8 +74,8 @@ func (self *binClient) Bin(name string) []trib.Storage {
     return result
 }
 
-func (self *binClient) checkAddr(binName string, addr string) trib.Storage {
-    client := &attClient{bin:binName, client:NewClient(addr)}
+func (self *binClient) checkAddr(addr string) trib.Storage {
+    client := NewClient(addr)
     list := trib.List{[]string{}}
     err := client.Keys(&trib.Pattern{"", "Completed"}, &list)
     if err == nil {
