@@ -65,6 +65,7 @@ func (self *binKeeper) Ask(server, bin_name string, status *int) error {
 		return e
 	}
 	e = conn.Call("Keep_bin.Ask", bin_name, status)
+	defer conn.Close()
 	if e != nil {
 		return e
 	}

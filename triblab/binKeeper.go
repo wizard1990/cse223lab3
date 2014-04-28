@@ -11,6 +11,9 @@ type binKeeper struct {
 	backs []string
 	Ready chan<- bool
 
+	clock_lock sync.Mutex
+	MaxCount   uint64
+
 	//Args for consistency
 	bin_lock   sync.Mutex
 	locked_bin map[string]int
@@ -48,67 +51,40 @@ func NewKeeper(kc *trib.KeeperConfig) *binKeeper {
 	//Plz don't commit error code
 
 	/*
-		keeper.bc = NewKeeperClient(kc.Backs) // keeper client
-		for _,addr := range keeper.backs{
-	    keeper.clientMap[addr] = &client{addr:addr}
-		}
+			keeper.bc = NewKeeperClient(kc.Backs) // keeper client
+			for _,addr := range keeper.backs{
+		    keeper.clientMap[addr] = &client{addr:addr}
+			}
 	*/
 	//End Xintian
 
 	return &keeper
 }
 
-func (self *binKeeper) run() error {
-	testChan := make(chan error, len(self.backs))
-	bc := NewBinClient(self.backs)
+func (self *binKeeper) send_clock_sync(addr string, c uint64) error {
+	rpc := NewClient(addr)
+	var cret uint64
+	fmt.Println(addr, c)
+	e := rpc.Clock(c, &cret)
 
-	//check the connection to each back-end
-	for _, addr := range self.backs {
-		go func(addr string) {
-			var t uint64 = 0
-			testChan <- bc.Bin(addr).Clock(0, &t)
-		}(addr)
+	self.clock_lock.Lock()
+	if cret > self.MaxCount {
+		self.MaxCount = cret
 	}
-	for i := 0; i < len(self.backs); i++ {
-		err := <-testChan
-		if err != nil {
-			if self.Ready != nil {
-				self.Ready <- false
-			}
-			return err
-		}
-	}
-	if self.Ready != nil {
-		self.Ready <- true
-	}
+	self.clock_lock.Unlock()
 
-	//start keeping clock
-	var synClock uint64 = 0
-	timer := time.Tick(1000 * time.Millisecond)
-	results := make(chan uint64, len(self.backs))
+	return e
+}
+func (self *binKeeper) clock_sync() error {
+	fmt.Println("clock_sync")
 
 	for {
-		select {
-		case <-timer:
-			for _, addr := range self.backs {
-				go func(addr string) {
-					var t uint64 = 0
-					bc.Bin(addr).Clock(synClock, &t)
-					results <- t
-				}(addr)
-			}
-			go func() {
-				for i := 0; i < len(self.backs); i++ {
-					t := <-results
-					if t > synClock {
-						synClock = t
-					}
-				}
-			}()
-		default:
-			time.Sleep(100 * time.Millisecond)
+		for _, addr := range self.backs {
+			go self.send_clock_sync(
+				addr, self.MaxCount)
 		}
-
+		time.Sleep(1 * time.Second)
 	}
-	return fmt.Errorf("Warning! Big brother is not watching you!")
+	return nil
+
 }
