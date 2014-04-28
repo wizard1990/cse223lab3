@@ -1,12 +1,16 @@
 package triblab
 
 import (
+	"sync"
 	"trib"
-    "sync"
 )
 
 func NewBinClient(backs []string) trib.BinStorage {
 	return &binClient{backs: backs, indexMap: make(map[string]int)}
+}
+
+func NewKeeperClient(backs []string) KeeperStorage {
+	return &keeperClient{backs: backs, indexMap: make(map[string]int)}
 }
 
 func ServeKeeper(kc *trib.KeeperConfig) error {
@@ -17,5 +21,5 @@ func ServeKeeper(kc *trib.KeeperConfig) error {
 }
 
 func NewFront(s trib.BinStorage) trib.Server {
-    return &binServer{server:s, lock:sync.Mutex{}}
+	return &binServer{server: s, lock: sync.Mutex{}}
 }
