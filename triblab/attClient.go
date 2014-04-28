@@ -20,22 +20,30 @@ func FindLargestClock(l1 *trib.List, l2 *trib.List, l3 *trib.List) (uint64, *tri
 }
 
 func (self *attClient) Get(key string, value *string) error {
-    res0 := trib.List([]string{})
-    res1 := trib.List([]string{})
-    res2 := trib.List([]string{})
+    res0 := trib.List{[]string{}}
+    res1 := trib.List{[]string{}}
+    res2 := trib.List{[]string{}}
     self.client[0].ListGet(genPrefix(self.bin) + key + "::KV", &res0)
     self.client[1].ListGet(genPrefix(self.bin) + key + "::KV", &res1)
     self.client[2].ListGet(genPrefix(self.bin) + key + "::KV", &res2)
-
     clk, res , ele := FindLargestClock(res0, res1, res2)
+
     *value = ele
     return nil
 }
 
 func (self *attClient) Set(kv *trib.KeyValue, succ *bool) error {
-	for i := 0; i < 3; i++ {
-		self.client[i].Set(&trib.KeyValue{genPrefix(self.bin) + kv.Key, kv.Value}, succ)
-	}
+    res0 := trib.List{[]string{}}
+    res1 := trib.List{[]string{}}
+    res2 := trib.List{[]string{}}
+    self.client[0].ListGet(genPrefix(self.bin) + key + "::KV", &res0)
+    self.client[1].ListGet(genPrefix(self.bin) + key + "::KV", &res1)
+    self.client[2].ListGet(genPrefix(self.bin) + key + "::KV", &res2)
+    clk, res , ele := FindLargestClock(res0, res1, res2)
+
+	// for i := 0; i < 3; i++ {
+	// 	self.client[i].Set(&trib.KeyValue{genPrefix(self.bin) + kv.Key, kv.Value}, succ)
+	// }
 	return nil
 }
 
