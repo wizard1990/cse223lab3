@@ -66,6 +66,7 @@ func (self *attClient) Keys(p *trib.Pattern, list *trib.List) error {
 	list.L = (MergeKeyList(&res0, &res1, &res2)).L
 	for i, s := range list.L {
 		list.L[i] = s[len(genPrefix(self.bin)):]
+		list.L[i] = list.L[i][:len(list.L[i]) - 4]
 	}
 	return nil
 }
@@ -79,6 +80,9 @@ func (self *attClient) ListGet(key string, list *trib.List) error {
 	self.client[2].ListGet(genPrefix(self.bin)+key+"::L", &res2)
 	_, res, _ := FindLargestClock(&res0, &res1, &res2)
 	list.L = res.L
+	for i, _ := range list.L {
+		_, list.L[i] = SplitClock(list.L[i])
+	}
 	return nil
 }
 
@@ -141,6 +145,7 @@ func (self *attClient) ListKeys(p *trib.Pattern, list *trib.List) error {
 	list.L = (MergeKeyList(&res0, &res1, &res2)).L
 	for i, s := range list.L {
 		list.L[i] = s[len(genPrefix(self.bin)):]
+		list.L[i] = list.L[i][:len(list.L[i]) - 3]
 	}
 	return nil
 }
