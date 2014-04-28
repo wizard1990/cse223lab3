@@ -35,7 +35,7 @@ func (self *client) Connect(reconnect bool) error {
 }
 
 func (self *client) Get(key string, value *string) error {
-	if e := self.Connect(false); e != nil {
+	if e := self.Connect(true); e != nil {
 		fmt.Println(e)
 		return e
 	}
@@ -57,7 +57,7 @@ func (self *client) Get(key string, value *string) error {
 }
 
 func (self *client) Set(kv *trib.KeyValue, succ *bool) error {
-	if e := self.Connect(false); e != nil {
+	if e := self.Connect(true); e != nil {
 		fmt.Println(e)
 		return e
 	}
@@ -77,7 +77,7 @@ func (self *client) Set(kv *trib.KeyValue, succ *bool) error {
 }
 
 func (self *client) Keys(p *trib.Pattern, list *trib.List) error {
-	if e := self.Connect(false); e != nil {
+	if e := self.Connect(true); e != nil {
 		fmt.Println(e)
 		return e
 	}
@@ -99,7 +99,7 @@ func (self *client) Keys(p *trib.Pattern, list *trib.List) error {
 }
 
 func (self *client) ListGet(key string, list *trib.List) error {
-	if e := self.Connect(false); e != nil {
+	if e := self.Connect(true); e != nil {
 		fmt.Println(e)
 		return e
 	}
@@ -123,7 +123,7 @@ func (self *client) ListGet(key string, list *trib.List) error {
 }
 
 func (self *client) ListAppend(kv *trib.KeyValue, succ *bool) error {
-	if e := self.Connect(false); e != nil {
+	if e := self.Connect(true); e != nil {
 		fmt.Println(e)
 		return e
 	}
@@ -143,7 +143,7 @@ func (self *client) ListAppend(kv *trib.KeyValue, succ *bool) error {
 }
 
 func (self *client) ListRemove(kv *trib.KeyValue, n *int) error {
-	if e := self.Connect(false); e != nil {
+	if e := self.Connect(true); e != nil {
 		fmt.Println(e)
 		return e
 	}
@@ -163,7 +163,7 @@ func (self *client) ListRemove(kv *trib.KeyValue, n *int) error {
 }
 
 func (self *client) ListKeys(p *trib.Pattern, list *trib.List) error {
-	if e := self.Connect(false); e != nil {
+	if e := self.Connect(true); e != nil {
 		fmt.Println(e)
 		return e
 	}
@@ -187,7 +187,7 @@ func (self *client) ListKeys(p *trib.Pattern, list *trib.List) error {
 }
 
 func (self *client) Clock(atLeast uint64, ret *uint64) error {
-	if e := self.Connect(false); e != nil {
+	if e := self.Connect(true); e != nil {
 		fmt.Println(e)
 		return e
 	}
