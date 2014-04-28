@@ -41,14 +41,14 @@ func (self *attClient) Set(kv *trib.KeyValue, succ *bool) error {
     res0 := trib.List{[]string{}}
     res1 := trib.List{[]string{}}
     res2 := trib.List{[]string{}}
-    self.client[0].ListGet(genPrefix(self.bin) + key + "::KV", &res0)
-    self.client[1].ListGet(genPrefix(self.bin) + key + "::KV", &res1)
-    self.client[2].ListGet(genPrefix(self.bin) + key + "::KV", &res2)
+    self.client[0].ListGet(genPrefix(self.bin) + kv.Key + "::KV", &res0)
+    self.client[1].ListGet(genPrefix(self.bin) + kv.Key + "::KV", &res1)
+    self.client[2].ListGet(genPrefix(self.bin) + kv.Key + "::KV", &res2)
     clk, res , ele := FindLargestClock(&res0, &res1, &res2)
 
-	// for i := 0; i < 3; i++ {
-	// 	self.client[i].Set(&trib.KeyValue{genPrefix(self.bin) + kv.Key, kv.Value}, succ)
-	// }
+	for i := 0; i < 3; i++ {
+		self.client[i].Set(&trib.KeyValue{genPrefix(self.bin) + kv.Key, kv.Value}, succ)
+	}
 	return nil
 }
 
