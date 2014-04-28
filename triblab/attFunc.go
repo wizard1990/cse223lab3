@@ -134,6 +134,9 @@ func FindLargestClock(l1 *trib.List, l2 *trib.List, l3 *trib.List) (uint64, *tri
 		j++
 	}
 
+	if max_count == 0 {
+		return 0, &new_triblist, ""
+	}
 	_, message := SplitClock(max_collect[max_count])
 	return max_count, &new_triblist, message
 }
