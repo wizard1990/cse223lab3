@@ -21,8 +21,79 @@ func AddClock(clock uint64, str string) string {
 	return str
 }
 
-func DeleteClockList(l *trib.List) *trib.List {
+func DiffList(l1, l2 *trib.List) *trib.List {
 	return nil
+	/*
+		L := make([]*trib.List, 2)
+		L[0] = l1
+		L[1] = l2
+		max_collect := make(map[uint64]string)
+		for i, _ := range L {
+			for _, v := range L[i].L {
+				c, _ := SplitClock(v)
+
+				//Check it if in the max_collection
+				value, ok := max_collect[c]
+				if !ok {
+					max_collect[c] = v
+				} else {
+					if value != v {
+						fmt.Println("Error!", value, " != ", v)
+					}
+				}
+			}
+		}
+	*/
+}
+func DeleteClockList(l *trib.List) *trib.List {
+
+	new_triblist := trib.List{}
+	new_triblist.L = make([]string, len(l.L))
+
+	for i, v := range l.L {
+		_, m := SplitClock(v)
+
+		new_triblist.L[i] = m
+
+	}
+	return &new_triblist
+}
+
+func MergeKeyList(l1 *trib.List, l2 *trib.List, l3 *trib.List) *trib.List {
+	L := make([]*trib.List, 3)
+	L[0] = l1
+	L[1] = l2
+	L[2] = l3
+
+	max_collect := make(map[string]string)
+	for i, _ := range L {
+		for _, v := range L[i].L {
+			c := v
+
+			//Check it if in the max_collection
+			value, ok := max_collect[c]
+			if !ok {
+				max_collect[c] = v
+			} else {
+				if value != v {
+					fmt.Println("Error!", value, " != ", v)
+				}
+			}
+		}
+	}
+
+	//rebuild the tribList
+	new_triblist := trib.List{}
+	new_triblist.L = make([]string, len(max_collect))
+
+	j := 0
+	for _, v := range max_collect {
+		//fmt.Println(i, v)
+		new_triblist.L[j] = v
+		j++
+	}
+	return &new_triblist
+
 }
 func FindLargestClock(l1 *trib.List, l2 *trib.List, l3 *trib.List) (uint64, *trib.List, string) {
 	L := make([]*trib.List, 3)
