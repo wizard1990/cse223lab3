@@ -28,11 +28,8 @@ func (self *attClient) Get(key string, value *string) error {
     self.client[2].ListGet(genPrefix(self.bin) + key + "::KV", &res2)
 
     clk, res , ele := FindLargestClock(res0, res1, res2)
-    for i := 0; i < 3; i++ {
-        n := 0
-        self.client[i].Clock(clk, &n)
-    }
-    return self.client[index].Get(genPrefix(self.bin) + key, value)
+    *value = ele
+    return nil
 }
 
 func (self *attClient) Set(kv *trib.KeyValue, succ *bool) error {
