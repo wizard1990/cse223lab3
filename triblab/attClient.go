@@ -46,7 +46,6 @@ func (self *attClient) Set(kv *trib.KeyValue, succ *bool) error {
 		}
 	}
 	for i := 0; i < 3; i++ {
-		*succ = false
 		self.client[i].ListAppend(&trib.KeyValue{genPrefix(self.bin) + kv.Key + "::KV", AddClock(n, kv.Value)}, succ)
 	}
 	return nil
@@ -77,9 +76,30 @@ func (self *attClient) ListGet(key string, list *trib.List) error {
 	self.client[1].ListGet(genPrefix(self.bin)+key+"::L", &res1)
 	self.client[2].ListGet(genPrefix(self.bin)+key+"::L", &res2)
 	_, res, _ := FindLargestClock(&res0, &res1, &res2)
-	list.L = res.L
+	//todo::get remove list
+	rmList := []string{}
+	list.L = []string{}
+	for _, vRes := range res.L {
+		if vRes[len(vRes)-6:] == "Append" {
+			flag := true
+			resClk, tvRes := SplitClock(vRes)
+			for _, vRm := range rmList {
+				//remove later and values equal
+				if rmClk, tvRm:= SplitClock(vRm); (rmClk > resClk) && (tvRm[:len(tvRm)-8] == tvRes[:len(tvRes)-8]) {
+					flag = false
+					break
+				}
+			}
+			if flag {
+				list.L = append(list.L, vRes)
+			}
+		}
+	}
+
+	//list.L = res.L
 	for i, _ := range list.L {
 		_, list.L[i] = SplitClock(list.L[i])
+		list.L[i] = list.L[i][:len(list.L[i])-8]
 	}
 	return nil
 }
@@ -102,8 +122,7 @@ func (self *attClient) ListAppend(kv *trib.KeyValue, succ *bool) error {
 		}
 	}
 	for i := 0; i < 3; i++ {
-		succ := false
-		self.client[i].ListAppend(&trib.KeyValue{genPrefix(self.bin) + kv.Key + "::L", AddClock(n, kv.Value)+"::Append"}, &succ)
+		self.client[i].ListAppend(&trib.KeyValue{genPrefix(self.bin) + kv.Key + "::L", AddClock(n, kv.Value)+"::Append"}, succ)
 	}
 	return nil
 }
@@ -115,19 +134,36 @@ func (self *attClient) ListRemove(kv *trib.KeyValue, n *int) error {
 	self.client[0].ListGet(genPrefix(self.bin)+kv.Key+"::L", &res0)
 	self.client[1].ListGet(genPrefix(self.bin)+kv.Key+"::L", &res1)
 	self.client[2].ListGet(genPrefix(self.bin)+kv.Key+"::L", &res2)
-	_, res, _ := FindLargestClock(&res0, &res1, &res2)
+	clk, res, _ := FindLargestClock(&res0, &res1, &res2)
+
+	var maxClk uint64
+	for i := 0; i < 3; i++ {
+		var t uint64
+		self.client[i].Clock(clk, &t)
+		if t > maxClk {
+			maxClk = t
+		}
+	}
 
 	resCnt := 0
 	t := 0
 	for _, v := range res.L {
-		if _, tv := SplitClock(v); tv == kv.Value {
+		if _, tv := SplitClock(v); tv[:len(tv) - 8] == kv.Value {
 			for i := 0; i < 3; i++ {
 				self.client[i].ListRemove(&trib.KeyValue{genPrefix(self.bin) + kv.Key + "::L", v}, &t)
 			}
-			resCnt++
+			if tv[:len(tv) - 6] == "Append" {
+				resCnt++
+			} else {
+				resCnt = 0
+			}
 		}
 	}
 	*n = resCnt
+	for i := 0; i < 3; i++ {
+		succ := false
+		self.client[i].ListAppend(&trib.KeyValue{genPrefix(self.bin) + kv.Key + "::L", AddClock(maxClk, kv.Value) + "::Remove"}, &succ)
+	}
 	return nil
 }
 
