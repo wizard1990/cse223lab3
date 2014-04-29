@@ -106,7 +106,7 @@ func (self *attClient) ListAppend(kv *trib.KeyValue, succ *bool) error {
 	}
 	for i := 0; i < 3; i++ {
 		succ := false
-		self.client[i].ListAppend(&trib.KeyValue{genPrefix(self.bin) + kv.Key + "::L", AddClock(n, kv.Value)}, &succ)
+		self.client[i].ListAppend(&trib.KeyValue{genPrefix(self.bin) + kv.Key + "::L", AddClock(n, kv.Value)+"::Append"}, &succ)
 	}
 	return nil
 }
