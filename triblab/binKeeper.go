@@ -50,8 +50,8 @@ func NewKeeper(kc *trib.KeeperConfig) *binKeeper {
 	keeper.bc = NewKeeperClient(kc.Backs) // keeper client
 
 	keeper.clientMap = make(map[string]trib.Storage)
-	for _,addr := range keeper.backs{
-    keeper.clientMap[addr] = &client{addr:addr}
+	for _, addr := range keeper.backs {
+		keeper.clientMap[addr] = &client{addr: addr}
 	}
 	//End Xintian
 
@@ -62,7 +62,7 @@ func (self *binKeeper) send_clock_sync(addr string, c uint64) error {
 	rpc := NewClient(addr)
 	var cret uint64
 	c = self.MaxCount
-	fmt.Println(addr, c)
+	//fmt.Println(addr, c)
 	e := rpc.Clock(c, &cret)
 
 	self.clock_lock.Lock()

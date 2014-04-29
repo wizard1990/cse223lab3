@@ -15,8 +15,9 @@ func NewKeeperClient(backs []string) KeeperStorage {
 
 func ServeKeeper(kc *trib.KeeperConfig) error {
 	keeper := NewKeeper(kc)
-	go keeper.Tao_T() //Test code for consistency
+	//go keeper.Tao_T() //Test code for consistency
 	go keeper.clock_sync()
+	go keeper.Replicate_bin()
 	kc.Ready <- true
 	return keeper.Serve_Consistency_RPC()
 }
