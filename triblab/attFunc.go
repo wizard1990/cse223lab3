@@ -108,7 +108,6 @@ func GetDisplayList(l *trib.List) *trib.List {
 			list_remove(&g, message)
 		}
 	}
-	//fmt.Println(g)
 	return &g
 }
 
@@ -130,6 +129,7 @@ func SortList(l *trib.List) *trib.List {
 			}
 		}
 	}
+	//fmt.Println(l)
 	return l
 }
 

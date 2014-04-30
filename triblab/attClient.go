@@ -1,7 +1,7 @@
 package triblab
 
 import (
-	//	"fmt"
+	"fmt"
 	"trib"
 	"trib/colon"
 )
@@ -97,13 +97,16 @@ func (self *attClient) ListGet(key string, list *trib.List) error {
 	// 	}
 	// }
 
-	list.L = res.L
-	GetDisplayList(list)
+	//list.L = res.L
+
+	list.L = GetDisplayList(res).L
 	//?Tao's function
-	for i, _ := range list.L {
-		_, list.L[i] = SplitClock(list.L[i])
-		list.L[i] = list.L[i][:len(list.L[i])-8]
-	}
+	/*
+		for i, _ := range list.L {
+			_, list.L[i] = SplitClock(list.L[i])
+			list.L[i] = list.L[i][:len(list.L[i])-8]
+		}
+	*/
 
 	return nil
 }
@@ -141,7 +144,7 @@ func (self *attClient) ListRemove(kv *trib.KeyValue, n *int) error {
 	self.client[2].ListGet(genPrefix(self.bin)+kv.Key+"::L", &res2)
 	clk, res, _ := FindLargestClock(&res0, &res1, &res2)
 	clk++
-	
+
 	var maxClk uint64
 	for i := 0; i < 3; i++ {
 		var t uint64
@@ -158,7 +161,7 @@ func (self *attClient) ListRemove(kv *trib.KeyValue, n *int) error {
 			for i := 0; i < 3; i++ {
 				self.client[i].ListRemove(&trib.KeyValue{genPrefix(self.bin) + kv.Key + "::L", v}, &t)
 			}
-			if tv[:len(tv)-6] == "Append" {
+			if tv[len(tv)-6:] == "Append" {
 				resCnt++
 			} else {
 				resCnt = 0
@@ -194,5 +197,7 @@ func (self *attClient) Clock(atLeast uint64, ret *uint64) error {
 	for i := 0; i < 3; i++ {
 		self.client[i].Clock(atLeast, ret)
 	}
+	return nil
+	fmt.Println("123")
 	return nil
 }
