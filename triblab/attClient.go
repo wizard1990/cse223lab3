@@ -37,6 +37,7 @@ func (self *attClient) Set(kv *trib.KeyValue, succ *bool) error {
 	self.client[2].ListGet(genPrefix(self.bin)+kv.Key+"::KV", &res2)
 	clk, _, _ := FindLargestClock(&res0, &res1, &res2)
 
+	clk++ //YAN remeber to increase the clk before call Lock
 	var n uint64
 	for i := 0; i < 3; i++ {
 		var t uint64
@@ -85,7 +86,7 @@ func (self *attClient) ListGet(key string, list *trib.List) error {
 			resClk, tvRes := SplitClock(vRes)
 			for _, vRm := range rmList {
 				//remove later and values equal
-				if rmClk, tvRm:= SplitClock(vRm); (rmClk > resClk) && (tvRm[:len(tvRm)-8] == tvRes[:len(tvRes)-8]) {
+				if rmClk, tvRm := SplitClock(vRm); (rmClk > resClk) && (tvRm[:len(tvRm)-8] == tvRes[:len(tvRes)-8]) {
 					flag = false
 					break
 				}
@@ -97,10 +98,13 @@ func (self *attClient) ListGet(key string, list *trib.List) error {
 	}
 
 	//list.L = res.L
+	GetDisplayList(list)
+	//?Tao's function
 	for i, _ := range list.L {
 		_, list.L[i] = SplitClock(list.L[i])
 		list.L[i] = list.L[i][:len(list.L[i])-8]
 	}
+
 	return nil
 }
 
@@ -122,7 +126,7 @@ func (self *attClient) ListAppend(kv *trib.KeyValue, succ *bool) error {
 		}
 	}
 	for i := 0; i < 3; i++ {
-		self.client[i].ListAppend(&trib.KeyValue{genPrefix(self.bin) + kv.Key + "::L", AddClock(n, kv.Value)+"::Append"}, succ)
+		self.client[i].ListAppend(&trib.KeyValue{genPrefix(self.bin) + kv.Key + "::L", AddClock(n, kv.Value) + "::Append"}, succ)
 	}
 	return nil
 }
@@ -148,11 +152,11 @@ func (self *attClient) ListRemove(kv *trib.KeyValue, n *int) error {
 	resCnt := 0
 	t := 0
 	for _, v := range res.L {
-		if _, tv := SplitClock(v); tv[:len(tv) - 8] == kv.Value {
+		if _, tv := SplitClock(v); tv[:len(tv)-8] == kv.Value {
 			for i := 0; i < 3; i++ {
 				self.client[i].ListRemove(&trib.KeyValue{genPrefix(self.bin) + kv.Key + "::L", v}, &t)
 			}
-			if tv[:len(tv) - 6] == "Append" {
+			if tv[:len(tv)-6] == "Append" {
 				resCnt++
 			} else {
 				resCnt = 0

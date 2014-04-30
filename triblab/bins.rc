@@ -1,8 +1,8 @@
 {
     "Backs": [
-        "localhost:10000",
-        "localhost:10001",
-        "localhost:10002"
+        "localhost:10005",
+        "localhost:10006",
+        "localhost:10007"
     ],
     "Keepers": [
         "localhost:20000",
