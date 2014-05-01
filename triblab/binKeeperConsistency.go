@@ -89,7 +89,9 @@ func (self *binKeeper) start_audit_bin(bin_name string) bool {
 	//Start to boardcast
 	for i, _ := range status_list {
 		status_list[i] = 0
-		e := self.Ask(self.Keeper_addrs[i], bin_name, &status_list[i])
+		var tmp int
+		e := self.Ask(self.Keeper_addrs[i], bin_name, &tmp)
+		status_list[i] = tmp
 		if e != nil {
 			continue
 		}
