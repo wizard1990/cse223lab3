@@ -71,7 +71,7 @@ func (self *attClient) Set(kv *trib.KeyValue, succ *bool) error {
 }
 
 func (self *attClient) Keys(p *trib.Pattern, list *trib.List) error {
-	np := trib.Pattern{genPrefix(self.bin) + colon.Escape(p.Prefix), p.Suffix + "::KV"}
+	np := trib.Pattern{genPrefix(self.bin) + colon.Escape(p.Prefix), colon.Escape(p.Suffix) + "::KV"}
 	res0 := trib.List{[]string{}}
 	res1 := trib.List{[]string{}}
 	res2 := trib.List{[]string{}}
@@ -187,7 +187,7 @@ func (self *attClient) ListRemove(kv *trib.KeyValue, n *int) error {
 }
 
 func (self *attClient) ListKeys(p *trib.Pattern, list *trib.List) error {
-	np := trib.Pattern{genPrefix(self.bin) + colon.Escape(p.Prefix), p.Suffix + "::L"}
+	np := trib.Pattern{genPrefix(self.bin) + colon.Escape(p.Prefix), colon.Escape(p.Suffix) + "::L"}
 	res0 := trib.List{[]string{}}
 	res1 := trib.List{[]string{}}
 	res2 := trib.List{[]string{}}
