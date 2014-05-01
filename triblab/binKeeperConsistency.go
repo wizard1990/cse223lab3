@@ -61,11 +61,11 @@ func (self *binKeeper) Serve_Consistency_RPC() error {
 
 func (self *binKeeper) Ask(server, bin_name string, status *int) error {
 	conn, e := rpc.DialHTTP("tcp", server)
+	defer conn.Close()
 	if e != nil {
 		return e
 	}
 	e = conn.Call("Keep_bin.Ask", bin_name, status)
-	defer conn.Close()
 	if e != nil {
 		return e
 	}
