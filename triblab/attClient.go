@@ -1,7 +1,6 @@
 package triblab
 
 import (
-	"fmt"
 	"trib"
 	"trib/colon"
 )
@@ -85,7 +84,6 @@ func (self *attClient) Keys(p *trib.Pattern, list *trib.List) error {
 	for i, s := range list.L {
 		list.L[i] = s[len(genPrefix(self.bin)):]
 		list.L[i] = colon.Unescape(list.L[i][:len(list.L[i])-4])
-		//fmt.Println(list.L)
 	}
 	return nil
 }
@@ -217,7 +215,5 @@ func (self *attClient) Clock(atLeast uint64, ret *uint64) error {
 	if flag {
 		self.RefreshBin()
 	}
-	return nil
-	fmt.Println("123")
 	return nil
 }
