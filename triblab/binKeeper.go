@@ -20,7 +20,7 @@ type binKeeper struct {
 	//End consisntecy
 
 	//Xintian Args for replicate
-	clientMap map[string]trib.Storage
+	clientMap map[string]client
 	bc        KeeperStorage
 	//End Xintian
 
@@ -49,9 +49,9 @@ func NewKeeper(kc *trib.KeeperConfig) *binKeeper {
 	//Xintian for replicate
 	keeper.bc = NewKeeperClient(kc.Backs) // keeper client
 
-	keeper.clientMap = make(map[string]trib.Storage)
+	keeper.clientMap = make(map[string]client)
 	for _, addr := range keeper.backs {
-		keeper.clientMap[addr] = &client{addr: addr}
+		keeper.clientMap[addr] = client{addr: addr}
 	}
 	//End Xintian
 

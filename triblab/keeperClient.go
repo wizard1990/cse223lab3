@@ -19,7 +19,7 @@ func genPrefix(s string) string {
 */
 
 type KeeperStorage interface {
-	KeeperBin(name string) []trib.Storage
+	KeeperBin(name string) ([]trib.Storage, []string)
 }
 
 /*
@@ -28,10 +28,10 @@ func (self *keeperClient) Init() {
 	sort.Sort(ByHashValue(self.backs))
 }
 
-func (self *keeperClient) KeeperBin(name string) []trib.Storage {
+func (self *keeperClient) KeeperBin(name string) ([]trib.Storage, []string) {
 	self.Init()
 	if self.backs == nil {
-		return nil
+		return nil,nil
 	}
 
 	var startIndex int
@@ -56,8 +56,10 @@ func (self *keeperClient) KeeperBin(name string) []trib.Storage {
 
 	count := 0
 	result := make([]trib.Storage, 3)
+	addrResult := make([]string, 3)
 	for count < 3 {
 		if result[count] = self.checkAddr(name, self.backs[startIndex]); result[count] != nil {
+			addrResult[count] = self.backs[startIndex]
 			count++
 		}
 		startIndex++
@@ -65,7 +67,7 @@ func (self *keeperClient) KeeperBin(name string) []trib.Storage {
 			startIndex = 0
 		}
 	}
-	return result
+	return result, addrResult
 }
 
 func (self *keeperClient) checkAddr(binName string, addr string) trib.Storage {
