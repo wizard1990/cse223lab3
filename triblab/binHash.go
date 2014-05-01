@@ -1,7 +1,6 @@
 package triblab
 
 import (
-    //  "fmt"
     "hash/fnv"
     "sort"
     "trib"
