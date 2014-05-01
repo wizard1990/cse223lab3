@@ -1,7 +1,6 @@
 package triblab
 
 import (
-	"fmt"
 	"net/rpc"
 	"sync"
 	"trib"
@@ -29,14 +28,15 @@ func (self *client) Connect(reconnect bool) error {
 		}
 	}
 	if e != nil {
-		fmt.Println(e)
+		//fmt.Println(e)
+
 	}
 	return e
 }
 
 func (self *client) Get(key string, value *string) error {
 	if e := self.Connect(true); e != nil {
-		fmt.Println(e)
+		//fmt.Println(e)
 		return e
 	}
 
@@ -58,7 +58,6 @@ func (self *client) Get(key string, value *string) error {
 
 func (self *client) Set(kv *trib.KeyValue, succ *bool) error {
 	if e := self.Connect(true); e != nil {
-		fmt.Println(e)
 		return e
 	}
 	count := 0
@@ -78,7 +77,6 @@ func (self *client) Set(kv *trib.KeyValue, succ *bool) error {
 
 func (self *client) Keys(p *trib.Pattern, list *trib.List) error {
 	if e := self.Connect(true); e != nil {
-		fmt.Println(e)
 		return e
 	}
 	var tmpList *trib.List = &trib.List{[]string{}}
@@ -100,7 +98,6 @@ func (self *client) Keys(p *trib.Pattern, list *trib.List) error {
 
 func (self *client) ListGet(key string, list *trib.List) error {
 	if e := self.Connect(true); e != nil {
-		fmt.Println(e)
 		return e
 	}
 	list.L = nil
@@ -124,7 +121,6 @@ func (self *client) ListGet(key string, list *trib.List) error {
 
 func (self *client) ListAppend(kv *trib.KeyValue, succ *bool) error {
 	if e := self.Connect(true); e != nil {
-		fmt.Println(e)
 		return e
 	}
 	count := 0
@@ -144,7 +140,6 @@ func (self *client) ListAppend(kv *trib.KeyValue, succ *bool) error {
 
 func (self *client) ListRemove(kv *trib.KeyValue, n *int) error {
 	if e := self.Connect(true); e != nil {
-		fmt.Println(e)
 		return e
 	}
 	count := 0
@@ -164,7 +159,6 @@ func (self *client) ListRemove(kv *trib.KeyValue, n *int) error {
 
 func (self *client) ListKeys(p *trib.Pattern, list *trib.List) error {
 	if e := self.Connect(true); e != nil {
-		fmt.Println(e)
 		return e
 	}
 	list.L = nil
@@ -188,7 +182,6 @@ func (self *client) ListKeys(p *trib.Pattern, list *trib.List) error {
 
 func (self *client) Clock(atLeast uint64, ret *uint64) error {
 	if e := self.Connect(true); e != nil {
-		fmt.Println(e)
 		return e
 	}
 	count := 0
