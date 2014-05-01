@@ -120,7 +120,7 @@ func (self *binServer) Post(who, post string, clock uint64) error {
         User: who, 
         Message: post, 
         Time: time.Now(), 
-        Clock: c,
+        Clock: c+1,
     }
     b, e := json.Marshal(newTrib)
     if e != nil {
@@ -297,7 +297,7 @@ func (self *binServer) Home(user string) ([]*trib.Trib, error) {
         tribSort(tribList)
         newestTrib := tribList[len(tribList) - 1]
         var n uint64 = 0
-        self.server.Bin(user).Clock(newestTrib.Clock, &n)
+        self.server.Bin(user).Clock(newestTrib.Clock + 1, &n)
     }
     return tribList, nil
 }
