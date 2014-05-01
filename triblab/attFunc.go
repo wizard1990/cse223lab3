@@ -17,7 +17,7 @@ func SplitClock(str string) (uint64, string) {
 }
 func AddClock(clock uint64, str string) string {
 	clock_str := strconv.FormatUint(clock, 10)
-	clock_str = fmt.Sprintf("%0104s", clock_str)
+	//clock_str = fmt.Sprintf("%0104s", clock_str)
 	str = clock_str + "," + str
 	return str
 }

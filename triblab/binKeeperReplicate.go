@@ -3,7 +3,7 @@ package triblab
 import (
 	"fmt"
 	"strings"
-	"time"
+//	"time"
 	"trib"
 	"trib/colon"
 )
@@ -12,7 +12,7 @@ func (self *binKeeper) Replicate_bin() error {
 	index := 0
 
 	for {
-		time.Sleep(time.Second * 1)
+//		time.Sleep(time.Second * 1)
 		backend := self.clientMap[self.backs[index]]
 		users := trib.List{[]string{}}
 
@@ -88,7 +88,7 @@ func (self *binKeeper) updateAll(users []string, suffix string) error {
 //fmt.Println("updateALL")
 
 	for _, binName := range users {
-		time.Sleep(time.Microsecond * 100)
+//		time.Sleep(time.Microsecond * 100)
 		fmt.Println(binName)
 
 		binName = colon.Unescape(strings.TrimRight(binName, "::1::KV"))
