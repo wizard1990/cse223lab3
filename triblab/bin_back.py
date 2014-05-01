@@ -19,10 +19,11 @@ running_pid = []
 def create(addr):
     command = "kv-server -addr " + addr
     proc = subprocess.Popen(command.split(" "), shell=False)
-    return proc.pid
+    return proc
 
-def kill(pid):
-    subprocess.call(["kill", "-15", "%d" % pid])
+def kill(proc):
+    #subprocess.call(["kill", "-15", "%d" % pid])
+    proc.kill()
 
 def start(number):
     global running_server
