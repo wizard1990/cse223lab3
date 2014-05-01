@@ -3,6 +3,7 @@ package triblab
 import (
 	"sync"
 	"trib"
+	"fmt"
 )
 
 func NewBinClient(backs []string) trib.BinStorage {
@@ -17,6 +18,7 @@ func ServeKeeper(kc *trib.KeeperConfig) error {
 	keeper := NewKeeper(kc)
 	//go keeper.Tao_T() //Test code for consistency
 	go keeper.clock_sync()
+fmt.Println("servekeeper")
 	go keeper.Replicate_bin()
 	kc.Ready <- true
 	return keeper.Serve_Consistency_RPC()
