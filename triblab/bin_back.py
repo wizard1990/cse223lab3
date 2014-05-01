@@ -212,8 +212,8 @@ def create(addr):
     return proc
 
 def kill(proc):
-    #subprocess.call(["kill", "-15", "%d" % pid])
-    proc.kill()
+    subprocess.call(["kill", "-9", "%d" % proc.pid])
+    #proc.kill()
 
 def start(number):
     global running_server
