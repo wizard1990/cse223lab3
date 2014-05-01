@@ -15,13 +15,14 @@ server_name.append("localhost:10007")
 server_name.append("localhost:10008")
 server_name.append("localhost:10009")
 running_server = []
+running_pid = []
 def create(addr):
     command = "kv-server -addr " + addr
     proc = subprocess.Popen(command.split(" "), shell=False)
     return proc.pid
 
 def kill(pid):
-    subprocess.call(["kill", "-9", "%d" % pid])
+    subprocess.call(["kill", "-15", "%d" % pid])
 
 def start(number):
     global running_server
@@ -29,21 +30,25 @@ def start(number):
     if number > len(to_run):
         number = len(to_run)
     for i in to_run[:number]:
-        running_server.append(create(i))
+        running_server.append(i)
+        running_pid.append(create(i))
 def end(number):
     global running_server
-    if number > len(running_server):
-        number = len(running_server)
-    to_terminate = running_server[:number]
+    if number > len(running_pid):
+        number = len(running_pid)
+    to_terminate = running_pid[:number]
+    stop_running = running_server[:number]
+
 
     for i in to_terminate:
         kill(i)
-    running_server = [i for i in running_server if i not in to_terminate]
+    running_server = [i for i in running_server if i not in stop_running]
 
 
 def main():
     while True:
-        print "running_server_number:" + str(len(running_server))
+        print "running_server_number:" + str(len(running_server)), \
+                                        running_server
         print "$",  
         raw_command = raw_input()
         raw_command = raw_command.split(" ")
