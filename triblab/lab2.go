@@ -7,11 +7,11 @@ import (
 )
 
 func NewBinClient(backs []string) trib.BinStorage {
-	return &binClient{backs: backs, indexMap: make(map[string]int)}
+	return &binClient{backs: backs}
 }
 
 func NewKeeperClient(backs []string) KeeperStorage {
-	return &keeperClient{backs: backs, indexMap: make(map[string]int)}
+	return &keeperClient{backs: backs}
 }
 
 func ServeKeeper(kc *trib.KeeperConfig) error {
