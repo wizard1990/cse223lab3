@@ -61,7 +61,9 @@ func (self *binKeeper) Serve_Consistency_RPC() error {
 
 func (self *binKeeper) Ask(server, bin_name string, status *int) error {
 	conn, e := rpc.DialHTTP("tcp", server)
-	defer conn.Close()
+	if conn != nil {
+		defer conn.Close()
+	}
 	if e != nil {
 		return e
 	}
@@ -89,11 +91,13 @@ func (self *binKeeper) start_audit_bin(bin_name string) bool {
 	//Start to boardcast
 	for i, _ := range status_list {
 		status_list[i] = 0
-		var tmp int
+		tmp := 0
 		e := self.Ask(self.Keeper_addrs[i], bin_name, &tmp)
-		status_list[i] = tmp
+		if e == nil {
+			status_list[i] = tmp
+		}
 		if e != nil {
-			continue
+			//fmt.Println(e)
 		}
 	}
 

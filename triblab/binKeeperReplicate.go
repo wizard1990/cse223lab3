@@ -19,7 +19,7 @@ func (self *binKeeper) Replicate_bin() error {
 		if e == nil {
 			self.updateAll(users.L, backend)
 		} else {
-			fmt.Println(e)
+			//fmt.Println(e)
 		}
 
 		index++
