@@ -5,6 +5,7 @@ import (
 	"strings"
 	"trib"
 	"trib/colon"
+	"time"
 )
 
 func (self *binKeeper) Replicate_bin() error {
@@ -24,6 +25,7 @@ func (self *binKeeper) Replicate_bin() error {
 
 		index++
 		if index >= len(self.backs) {
+			time.Sleep(time.Second * 1)
 			index = 0
 		}
 	}
