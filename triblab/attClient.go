@@ -24,6 +24,8 @@ func (self *attClient) RefreshBin() {
 }
 
 func (self *attClient) Get(key string, value *string) error {
+	self.RefreshBin()
+
 	res0 := trib.List{[]string{}}
 	res1 := trib.List{[]string{}}
 	res2 := trib.List{[]string{}}
@@ -60,11 +62,11 @@ func (self *attClient) Get(key string, value *string) error {
 	_, _, ele := FindLargestClock(&res0, &res1, &res2)
 
 	*value = ele
-	self.RefreshBin()
 	return nil
 }
 
 func (self *attClient) Set(kv *trib.KeyValue, succ *bool) error {
+	self.RefreshBin()
 	res0 := trib.List{[]string{}}
 	res1 := trib.List{[]string{}}
 	res2 := trib.List{[]string{}}
@@ -107,13 +109,13 @@ func (self *attClient) Set(kv *trib.KeyValue, succ *bool) error {
 	for i := 0; i < 3; i++ {
 		<-self.channel
 	}
-	self.RefreshBin()
 	*succ = true
 
 	return nil
 }
 
 func (self *attClient) Keys(p *trib.Pattern, list *trib.List) error {
+	self.RefreshBin()
 	np := trib.Pattern{genPrefix(self.bin) + colon.Escape(p.Prefix), colon.Escape(p.Suffix) + "::KV"}
 	res0 := trib.List{[]string{}}
 	res1 := trib.List{[]string{}}
@@ -148,7 +150,6 @@ func (self *attClient) Keys(p *trib.Pattern, list *trib.List) error {
 		s += (<-self.channel)
 	}
 
-	self.RefreshBin()
 	list.L = (MergeKeyList(&res0, &res1, &res2)).L
 	for i, s := range list.L {
 		list.L[i] = s[len(genPrefix(self.bin)):]
@@ -158,6 +159,7 @@ func (self *attClient) Keys(p *trib.Pattern, list *trib.List) error {
 }
 
 func (self *attClient) ListGet(key string, list *trib.List) error {
+	self.RefreshBin()
 	res0 := trib.List{[]string{}}
 	res1 := trib.List{[]string{}}
 	res2 := trib.List{[]string{}}
@@ -189,7 +191,6 @@ func (self *attClient) ListGet(key string, list *trib.List) error {
 	for i := 0; i < 3; i++ {
 		s += (<-self.channel)
 	}
-	self.RefreshBin()
 	_, res, _ := FindLargestClock(&res0, &res1, &res2)
 
 	list.L = GetDisplayList(res).L
@@ -198,6 +199,7 @@ func (self *attClient) ListGet(key string, list *trib.List) error {
 }
 
 func (self *attClient) ListAppend(kv *trib.KeyValue, succ *bool) error {
+	self.RefreshBin()
 	res0 := trib.List{[]string{}}
 	res1 := trib.List{[]string{}}
 	res2 := trib.List{[]string{}}
@@ -240,12 +242,12 @@ func (self *attClient) ListAppend(kv *trib.KeyValue, succ *bool) error {
 	for i := 0; i < 3; i++ {
 		<-self.channel
 	}
-	self.RefreshBin()
 	*succ = true
 	return nil
 }
 
 func (self *attClient) ListRemove(kv *trib.KeyValue, n *int) error {
+	self.RefreshBin()
 	res0 := trib.List{[]string{}}
 	res1 := trib.List{[]string{}}
 	res2 := trib.List{[]string{}}
@@ -305,11 +307,11 @@ func (self *attClient) ListRemove(kv *trib.KeyValue, n *int) error {
 	for i := 0; i < 3; i++ {
 		<-self.channel
 	}
-	self.RefreshBin()
 	return nil
 }
 
 func (self *attClient) ListKeys(p *trib.Pattern, list *trib.List) error {
+	self.RefreshBin()
 	np := trib.Pattern{genPrefix(self.bin) + colon.Escape(p.Prefix), colon.Escape(p.Suffix) + "::L"}
 	res0 := trib.List{[]string{}}
 	res1 := trib.List{[]string{}}
@@ -342,8 +344,6 @@ func (self *attClient) ListKeys(p *trib.Pattern, list *trib.List) error {
 	for i := 0; i < 3; i++ {
 		s += (<-self.channel)
 	}
-	self.RefreshBin()
-
 	list.L = (MergeKeyList(&res0, &res1, &res2)).L
 	for i, s := range list.L {
 		list.L[i] = s[len(genPrefix(self.bin)):]
@@ -363,6 +363,5 @@ func (self *attClient) Clock(atLeast uint64, ret *uint64) error {
 			c <- 1
 		}(self.channel, i)
 	}
-	self.RefreshBin()
 	return nil
 }
