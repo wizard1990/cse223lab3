@@ -6,7 +6,7 @@ import (
 	"trib"
 )
 
-var CONNECT_TRIALS int = 1
+var CONNECT_TRIALS int = 0
 
 type client struct {
 	addr string
@@ -21,21 +21,17 @@ func (self *client) Connect(reconnect bool) error {
 		return nil
 	}
 	var e error
-	for i := 0; i < CONNECT_TRIALS; i++ {
+	for i := 0; i <= CONNECT_TRIALS; i++ {
 		self.conn, e = rpc.DialHTTP("tcp", self.addr)
 		if e == nil {
 			break
 		}
 	}
-	if e != nil {
-		//fmt.Println(e)
-
-	}
 	return e
 }
 
 func (self *client) Get(key string, value *string) error {
-	if e := self.Connect(true); e != nil {
+	if e := self.Connect(false); e != nil {
 		//fmt.Println(e)
 		return e
 	}
@@ -48,11 +44,12 @@ func (self *client) Get(key string, value *string) error {
 		}
 		e = self.Connect(true)
 		if e != nil {
+			self.conn.Close()
+			self.conn = nil
 			return e
 		}
 		count++
 	}
-	self.conn.Close()
 	return nil
 }
 
@@ -67,11 +64,12 @@ func (self *client) Set(kv *trib.KeyValue, succ *bool) error {
 		}
 		e = self.Connect(true)
 		if e != nil {
+			self.conn.Close()
+			self.conn = nil
 			return e
 		}
 		count++
 	}
-	self.conn.Close()
 	return nil
 }
 
@@ -87,6 +85,8 @@ func (self *client) Keys(p *trib.Pattern, list *trib.List) error {
 		}
 		e = self.Connect(true)
 		if e != nil {
+			self.conn.Close()
+			self.conn = nil
 			return e
 		}
 		count++
@@ -108,6 +108,8 @@ func (self *client) ListGet(key string, list *trib.List) error {
 		}
 		e = self.Connect(true)
 		if e != nil {
+			self.conn.Close()
+			self.conn = nil
 			return e
 		}
 		count++
@@ -130,6 +132,8 @@ func (self *client) ListAppend(kv *trib.KeyValue, succ *bool) error {
 		}
 		e = self.Connect(true)
 		if e != nil {
+			self.conn.Close()
+			self.conn = nil
 			return e
 		}
 		count++
@@ -149,6 +153,8 @@ func (self *client) ListRemove(kv *trib.KeyValue, n *int) error {
 		}
 		e = self.Connect(true)
 		if e != nil {
+			self.conn.Close()
+			self.conn = nil
 			return e
 		}
 		count++
@@ -169,6 +175,8 @@ func (self *client) ListKeys(p *trib.Pattern, list *trib.List) error {
 		}
 		e = self.Connect(true)
 		if e != nil {
+			self.conn.Close()
+			self.conn = nil
 			return e
 		}
 		count++
@@ -191,6 +199,8 @@ func (self *client) Clock(atLeast uint64, ret *uint64) error {
 		}
 		e = self.Connect(true)
 		if e != nil {
+			self.conn.Close()
+			self.conn = nil
 			return e
 		}
 		count++

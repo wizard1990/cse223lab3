@@ -60,9 +60,7 @@ func (self *attClient) Get(key string, value *string) error {
 	_, _, ele := FindLargestClock(&res0, &res1, &res2)
 
 	*value = ele
-	if s < 3 {
-		self.RefreshBin()
-	}
+	self.RefreshBin()
 	return nil
 }
 
@@ -109,9 +107,7 @@ func (self *attClient) Set(kv *trib.KeyValue, succ *bool) error {
 	for i := 0; i < 3; i++ {
 		<-self.channel
 	}
-	if flag {
-		self.RefreshBin()
-	}
+	self.RefreshBin()
 	*succ = true
 
 	return nil
@@ -152,9 +148,7 @@ func (self *attClient) Keys(p *trib.Pattern, list *trib.List) error {
 		s += (<-self.channel)
 	}
 
-	if s < 3 {
-		self.RefreshBin()
-	}
+	self.RefreshBin()
 	list.L = (MergeKeyList(&res0, &res1, &res2)).L
 	for i, s := range list.L {
 		list.L[i] = s[len(genPrefix(self.bin)):]
@@ -195,9 +189,7 @@ func (self *attClient) ListGet(key string, list *trib.List) error {
 	for i := 0; i < 3; i++ {
 		s += (<-self.channel)
 	}
-	if s < 3 {
-		self.RefreshBin()
-	}
+	self.RefreshBin()
 	_, res, _ := FindLargestClock(&res0, &res1, &res2)
 
 	list.L = GetDisplayList(res).L
@@ -248,9 +240,7 @@ func (self *attClient) ListAppend(kv *trib.KeyValue, succ *bool) error {
 	for i := 0; i < 3; i++ {
 		<-self.channel
 	}
-	if flag {
-		self.RefreshBin()
-	}
+	self.RefreshBin()
 	*succ = true
 	return nil
 }
@@ -315,9 +305,7 @@ func (self *attClient) ListRemove(kv *trib.KeyValue, n *int) error {
 	for i := 0; i < 3; i++ {
 		<-self.channel
 	}
-	if flag {
-		self.RefreshBin()
-	}
+	self.RefreshBin()
 	return nil
 }
 
@@ -354,9 +342,7 @@ func (self *attClient) ListKeys(p *trib.Pattern, list *trib.List) error {
 	for i := 0; i < 3; i++ {
 		s += (<-self.channel)
 	}
-	if s < 3 {
-		self.RefreshBin()
-	}
+	self.RefreshBin()
 
 	list.L = (MergeKeyList(&res0, &res1, &res2)).L
 	for i, s := range list.L {
@@ -377,8 +363,6 @@ func (self *attClient) Clock(atLeast uint64, ret *uint64) error {
 			c <- 1
 		}(self.channel, i)
 	}
-	if flag {
-		self.RefreshBin()
-	}
+	self.RefreshBin()
 	return nil
 }
