@@ -25,9 +25,24 @@ func (self *attClient) Get(key string, value *string) error {
 	res0 := trib.List{[]string{}}
 	res1 := trib.List{[]string{}}
 	res2 := trib.List{[]string{}}
-	e1 := self.client[0].ListGet(genPrefix(self.bin)+colon.Escape(key)+"::KV", &res0)
-	e2 := self.client[1].ListGet(genPrefix(self.bin)+colon.Escape(key)+"::KV", &res1)
-	e3 := self.client[2].ListGet(genPrefix(self.bin)+colon.Escape(key)+"::KV", &res2)
+
+	c := make(chan int, 3)
+	go func(chan int) {
+		e1 := self.client[0].ListGet(genPrefix(self.bin)+colon.Escape(key)+"::KV", &res0)
+		c <- 1
+	}(c)
+	go func(chan int) {
+		e2 := self.client[1].ListGet(genPrefix(self.bin)+colon.Escape(key)+"::KV", &res1)
+		c <- 1
+	}(c)
+	go func(chan int) {
+		e3 := self.client[2].ListGet(genPrefix(self.bin)+colon.Escape(key)+"::KV", &res2)
+		c <- 1
+	}(c)
+	for i := 0; i < 3; i++ {
+		<-c
+	}
+
 	_, _, ele := FindLargestClock(&res0, &res1, &res2)
 
 	*value = ele
@@ -41,9 +56,22 @@ func (self *attClient) Set(kv *trib.KeyValue, succ *bool) error {
 	res0 := trib.List{[]string{}}
 	res1 := trib.List{[]string{}}
 	res2 := trib.List{[]string{}}
-	self.client[0].ListGet(genPrefix(self.bin)+colon.Escape(kv.Key)+"::KV", &res0)
-	self.client[1].ListGet(genPrefix(self.bin)+colon.Escape(kv.Key)+"::KV", &res1)
-	self.client[2].ListGet(genPrefix(self.bin)+colon.Escape(kv.Key)+"::KV", &res2)
+	c := make(chan int, 3)
+	go func(chan int){ 
+		self.client[0].ListGet(genPrefix(self.bin)+colon.Escape(kv.Key)+"::KV", &res0)
+		c <- 1
+	}(c)
+	go func(chan int){ 
+		self.client[1].ListGet(genPrefix(self.bin)+colon.Escape(kv.Key)+"::KV", &res1)
+		c <- 1
+	}(c)
+	go func(chan int){ 
+		self.client[2].ListGet(genPrefix(self.bin)+colon.Escape(kv.Key)+"::KV", &res2)
+		c <- 1
+	}(c)
+	for i := 0; i < 3; i++ {
+		<-c
+	}
 	clk, _, _ := FindLargestClock(&res0, &res1, &res2)
 
 	clk++ //YAN remeber to increase the clk before call Lock
@@ -57,10 +85,16 @@ func (self *attClient) Set(kv *trib.KeyValue, succ *bool) error {
 	}
 	flag := false
 	for i := 0; i < 3; i++ {
-		e := self.client[i].ListAppend(&trib.KeyValue{genPrefix(self.bin)+colon.Escape(kv.Key) + "::KV", AddClock(n, kv.Value)}, succ)
+		go func(chan int) {
+			e := self.client[i].ListAppend(&trib.KeyValue{genPrefix(self.bin)+colon.Escape(kv.Key) + "::KV", AddClock(n, kv.Value)}, succ)
+			c <- 1
+		}(c)
 		if e != nil {
 			flag = true
 		}
+	}
+	for i := 0; i < 3; i++ {
+		<-c
 	}
 	if flag {
 		self.RefreshBin()
@@ -74,9 +108,24 @@ func (self *attClient) Keys(p *trib.Pattern, list *trib.List) error {
 	res0 := trib.List{[]string{}}
 	res1 := trib.List{[]string{}}
 	res2 := trib.List{[]string{}}
-	e1 := self.client[0].ListKeys(&np, &res0)
-	e2 := self.client[1].ListKeys(&np, &res1)
-	e3 := self.client[2].ListKeys(&np, &res2)
+
+	c := make(chan int, 3)
+	go func(chan int) {
+		e1 := self.client[0].ListKeys(&np, &res0)
+		c <- 1
+	}(c)
+	go func(chan int) {
+		e2 := self.client[1].ListKeys(&np, &res1)
+		c <- 1
+	}(c)
+	go func(chan int) {
+		e3 := self.client[2].ListKeys(&np, &res2)
+		c <- 1
+	}(c)
+	for i := 0; i < 3; i++ {
+		<-c
+	}
+
 	if (e1 != nil) || (e2 != nil) || (e3 != nil) {
 		self.RefreshBin()
 	}
@@ -92,9 +141,22 @@ func (self *attClient) ListGet(key string, list *trib.List) error {
 	res0 := trib.List{[]string{}}
 	res1 := trib.List{[]string{}}
 	res2 := trib.List{[]string{}}
-	e1 := self.client[0].ListGet(genPrefix(self.bin)+colon.Escape(key)+"::L", &res0)
-	e2 := self.client[1].ListGet(genPrefix(self.bin)+colon.Escape(key)+"::L", &res1)
-	e3 := self.client[2].ListGet(genPrefix(self.bin)+colon.Escape(key)+"::L", &res2)
+	c := make(chan int, 3)
+	go func(chan int) {
+		e1 := self.client[0].ListGet(genPrefix(self.bin)+colon.Escape(key)+"::L", &res0)
+		c <- 1
+	}(c)
+	go func(chan int) {
+		e2 := self.client[1].ListGet(genPrefix(self.bin)+colon.Escape(key)+"::L", &res1)
+		c <- 1
+	}(c)
+	go func(chan int) {
+		e3 := self.client[2].ListGet(genPrefix(self.bin)+colon.Escape(key)+"::L", &res2)
+		c <- 1
+	}(c)
+	for i := 0; i < 3; i++ {
+		<-c
+	}
 	if (e1 != nil) || (e2 != nil) || (e3 != nil) {
 		self.RefreshBin()
 	}
@@ -109,9 +171,22 @@ func (self *attClient) ListAppend(kv *trib.KeyValue, succ *bool) error {
 	res0 := trib.List{[]string{}}
 	res1 := trib.List{[]string{}}
 	res2 := trib.List{[]string{}}
-	self.client[0].ListGet(genPrefix(self.bin)+colon.Escape(kv.Key)+"::L", &res0)
-	self.client[1].ListGet(genPrefix(self.bin)+colon.Escape(kv.Key)+"::L", &res1)
-	self.client[2].ListGet(genPrefix(self.bin)+colon.Escape(kv.Key)+"::L", &res2)
+	c := make(chan int, 3)
+	go func(chan int) {
+		self.client[0].ListGet(genPrefix(self.bin)+colon.Escape(kv.Key)+"::L", &res0)
+		c <- 1
+	}(c)
+	go func(chan int) {
+		self.client[1].ListGet(genPrefix(self.bin)+colon.Escape(kv.Key)+"::L", &res1)
+		c <- 1
+	}(c)
+	go func(chan int) {
+		self.client[2].ListGet(genPrefix(self.bin)+colon.Escape(kv.Key)+"::L", &res2)
+		c <- 1
+	}(c)
+	for i := 0; i < 3; i++ {
+		<-c
+	}
 	clk, _, _ := FindLargestClock(&res0, &res1, &res2)
 	clk++
 
@@ -125,10 +200,16 @@ func (self *attClient) ListAppend(kv *trib.KeyValue, succ *bool) error {
 	}
 	flag := false
 	for i := 0; i < 3; i++ {
-		e := self.client[i].ListAppend(&trib.KeyValue{genPrefix(self.bin) + colon.Escape(kv.Key) + "::L", AddClock(n, kv.Value) + "::Append"}, succ)
+		go func(chan int) {
+			e := self.client[i].ListAppend(&trib.KeyValue{genPrefix(self.bin) + colon.Escape(kv.Key) + "::L", AddClock(n, kv.Value) + "::Append"}, succ)
+			c <- 1
+		}(c)
 		if e != nil {
 			flag = true
 		}
+	}
+	for i := 0; i < 3; i++ {
+		<-c
 	}
 	if flag {
 		self.RefreshBin()
@@ -140,9 +221,22 @@ func (self *attClient) ListRemove(kv *trib.KeyValue, n *int) error {
 	res0 := trib.List{[]string{}}
 	res1 := trib.List{[]string{}}
 	res2 := trib.List{[]string{}}
-	self.client[0].ListGet(genPrefix(self.bin)+colon.Escape(kv.Key)+"::L", &res0)
-	self.client[1].ListGet(genPrefix(self.bin)+colon.Escape(kv.Key)+"::L", &res1)
-	self.client[2].ListGet(genPrefix(self.bin)+colon.Escape(kv.Key)+"::L", &res2)
+	c := make(chan int, 3)
+	go func(chan int) {
+		self.client[0].ListGet(genPrefix(self.bin)+colon.Escape(kv.Key)+"::L", &res0)
+		c <- 1
+	}(c)
+	go func(chan int) {
+		self.client[1].ListGet(genPrefix(self.bin)+colon.Escape(kv.Key)+"::L", &res1)
+		c <- 1
+	}(c)
+	go func(chan int) {
+		self.client[2].ListGet(genPrefix(self.bin)+colon.Escape(kv.Key)+"::L", &res2)
+		c <- 1
+	}(c)
+	for i := 0; i < 3; i++ {
+		<-c
+	}
 	clk, res, _ := FindLargestClock(&res0, &res1, &res2)
 	clk++
 
@@ -173,10 +267,16 @@ func (self *attClient) ListRemove(kv *trib.KeyValue, n *int) error {
 	flag := false
 	for i := 0; i < 3; i++ {
 		succ := false
-		e := self.client[i].ListAppend(&trib.KeyValue{genPrefix(self.bin) + colon.Escape(kv.Key) + "::L", AddClock(maxClk, kv.Value) + "::Remove"}, &succ)
-		if e != nil {
-			flag = true
-		}
+		go func(chan int) {
+			e := self.client[i].ListAppend(&trib.KeyValue{genPrefix(self.bin) + colon.Escape(kv.Key) + "::L", AddClock(maxClk, kv.Value) + "::Remove"}, &succ)
+			if e != nil {
+				flag = true
+			}
+			c <- 1
+		}(c)
+	}
+	for i := 0; i < 3; i++ {
+		<-c
 	}
 	if flag {
 		self.RefreshBin()
@@ -189,11 +289,24 @@ func (self *attClient) ListKeys(p *trib.Pattern, list *trib.List) error {
 	res0 := trib.List{[]string{}}
 	res1 := trib.List{[]string{}}
 	res2 := trib.List{[]string{}}
-	e1 := self.client[0].ListKeys(&np, &res0)
-	e2 := self.client[1].ListKeys(&np, &res1)
-	e3 := self.client[2].ListKeys(&np, &res2)
+	c := make(chan int, 3)
+	go func(chan int) {
+		e1 := self.client[0].ListKeys(&np, &res0)
+		c <- 1
+	}(c)
+	go func(chan int) {
+		e2 := self.client[1].ListKeys(&np, &res1)
+		c <- 1
+	}(c)
+	go func(chan int) {
+		e3 := self.client[2].ListKeys(&np, &res2)
+		c <- 1
+	}(c)
 	if (e1 != nil) || (e2 != nil) || (e3 != nil) {
 		self.RefreshBin()
+	}
+	for i := 0; i < 3; i++ {
+		<-c
 	}
 
 	list.L = (MergeKeyList(&res0, &res1, &res2)).L
@@ -206,11 +319,16 @@ func (self *attClient) ListKeys(p *trib.Pattern, list *trib.List) error {
 
 func (self *attClient) Clock(atLeast uint64, ret *uint64) error {
 	flag := false
+	c := make(chan int, 3)
 	for i := 0; i < 3; i++ {
-		e := self.client[i].Clock(atLeast, ret)
-		if e != nil {
-			flag = true
-		}
+
+		go func(chan int) {
+			e := self.client[i].Clock(atLeast, ret)
+			if e != nil {
+				flag = true
+			}
+			c <- 1
+		}(c)
 	}
 	if flag {
 		self.RefreshBin()
