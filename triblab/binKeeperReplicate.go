@@ -3,96 +3,155 @@ package triblab
 import (
 	"fmt"
 	"strings"
+	"time"
 	"trib"
 	"trib/colon"
-	"time"
 )
 
 func (self *binKeeper) Replicate_bin() error {
-	index := 0
 
 	for {
-		backend := self.clientMap[self.backs[index]]
-		users := trib.List{[]string{}}
+		for index := 0; index < len(self.backs); index++ {
+			backend := self.clientMap[self.backs[index]]
+			tmp := trib.List{[]string{}}
 
-		e := backend.ListKeys(&(trib.Pattern{Suffix: "::1::KV"}), &users)
-
-		if e == nil {
-			self.updateAll(users.L, backend)
-		} else {
-			//fmt.Println(e)
-		}
-
-		index++
-		if index >= len(self.backs) {
-			time.Sleep(time.Second * 1)
-			index = 0
-		}
-	}
-	return fmt.Errorf("replication stops for strange reasons")
-}
-
-func (self *binKeeper) update(key string, bins []trib.Storage) error {
-
-	for _, b := range bins {
-		pattern := trib.Pattern{Suffix: "::" + key}
-		keysToCheck := trib.List{[]string{}}
-		b.ListKeys(&pattern, &keysToCheck)
-		for i, _ := range keysToCheck.L {
-			lists := make([]trib.List, 3)
-			for j, _ := range bins {
-				bins[j].ListGet(keysToCheck.L[i], &lists[j])
+			e := backend.ListKeys(&(trib.Pattern{"", ""}), &tmp)
+			if e != nil {
+				continue
 			}
-			_, maxSet, _ := FindLargestClock(&lists[0], &lists[1], &lists[2])
-			for j, origin := range lists {
-				toAdd := DiffList(maxSet, &origin)
-				for _, listToAdd := range toAdd.L {
-					succ := false
-					bins[j].ListAppend(&trib.KeyValue{keysToCheck.L[i], listToAdd}, &succ)
+
+			//TODO get bin_name
+
+			bin_map := make(map[string]int)
+
+			for _, str := range tmp.L {
+				p := strings.Index(str, "::")
+				bin_name := str[:p]
+
+				bin_name = colon.Unescape(bin_name)
+
+				_, ok := bin_map[bin_name]
+				if ok {
+					continue
+				} else {
+					bin_map[bin_name] = 1
+				}
+			}
+			for bin_name, _ := range bin_map {
+				e = self.audit_bin(bin_name, backend.addr)
+				if e == nil {
+					//remove local bin_name
 				}
 			}
 		}
+		//fmt.Println("Done Replication")
+		time.Sleep(1 * time.Second)
 	}
-	return nil
+	time.Sleep(1 * time.Second)
+	return fmt.Errorf("replication stops for strange reasons")
 }
 
-func (self *binKeeper) updateAll(users []string, backend client) error {
+func (self *binKeeper) audit_bin(bin_name string, back string) error {
+	flag := self.start_audit_bin(bin_name)
+	defer self.end_audit_bin(bin_name)
+	if flag == false {
+		return fmt.Errorf("Fail to lock")
+	}
 
-	for _, binName := range users {
+	backends_client, backends_addrs := self.bc.KeeperBin(bin_name)
 
-		binName = colon.Unescape(strings.TrimRight(binName, "::1::KV"))
+	_keys_list := make([]trib.List, 3)
 
-		if self.start_audit_bin(binName) == false {
-			self.end_audit_bin(binName)
-			continue
+	key_map := make(map[string]int)
+	for i := 0; i < 3; i++ {
+		e := backends_client[i].ListKeys(&trib.Pattern{}, &_keys_list[i])
+		if e != nil {
+			return e
 		}
-		binsToAudit, binsAddr := self.bc.KeeperBin(binName)
-		//update
-		self.update("KV", binsToAudit)
-		self.update("L", binsToAudit)
-		//clear bins that does not belong to 3 replica
-		self.deRedundant(binName, backend, binsAddr, "KV")
-		self.deRedundant(binName, backend, binsAddr, "L")
+		for _, str := range _keys_list[i].L {
+			_, ok := key_map[str]
+			if ok {
+				continue
+			} else {
+				key_map[str] = 1
+			}
+		}
+	}
+	all_replicate_done := true
+	for key, _ := range key_map {
+		e := self.replicate_key(key, backends_client)
+		if e != nil {
+			all_replicate_done = false
+		}
+	}
 
-		//update username key-value
-		self.end_audit_bin(binName)
+	if all_replicate_done {
+		go self.remove_redundant(back, backends_addrs, bin_name)
+		return nil
+	} else {
+		return fmt.Errorf("error")
+	}
 
+	fmt.Println(bin_name, backends_addrs)
+	return nil
+	fmt.Println(backends_client)
+	return nil
+}
+
+func (self *binKeeper) replicate_key(key string, backends_client []trib.Storage) error {
+	//Get all list
+	lists := make([]trib.List, 3)
+	for i := 0; i < 3; i++ {
+		e := backends_client[i].ListGet(key, &lists[i])
+		if e != nil {
+			return e
+		}
+	}
+
+	_, max_set, _ := FindLargestClock(&lists[0], &lists[1], &lists[2])
+
+	for i := 0; i < 3; i++ {
+		to_add := DiffList(max_set, &lists[i])
+
+		for _, value := range to_add.L {
+			succ := false
+			e := backends_client[i].ListAppend(&trib.KeyValue{key, value}, &succ)
+			if e != nil {
+				return e
+			}
+			if succ == false {
+				return fmt.Errorf("error0")
+			}
+		}
 	}
 	return nil
 }
 
-func (self *binKeeper) deRedundant(binName string, backend client, binsAddr []string, suffix string) error {
-	if backend.addr != binsAddr[0] && backend.addr != binsAddr[1] && backend.addr != binsAddr[2] {
-		keys := trib.List{[]string{}}
-		backend.ListKeys(&trib.Pattern{Prefix: binName, Suffix: suffix}, &keys)
-		for _, key := range keys.L {
-			values := trib.List{[]string{}}
-			backend.ListGet(key, &values)
-			for _, value := range values.L {
-				n := 0
-				backend.ListRemove(&trib.KeyValue{key, value}, &n)
+func (self *binKeeper) remove_redundant(back string, addrs []string, bin_name string) error {
+	for i := 0; i < 3; i++ {
+		if back == addrs[i] {
+			return nil
+		}
+	}
 
-			}
+	c := NewClient(back)
+
+	prefix := colon.Escape(bin_name) + "::"
+
+	tmp := trib.List{}
+	e := c.ListKeys(&(trib.Pattern{prefix, ""}), &tmp)
+
+	for _, key := range tmp.L {
+		//Get list
+		values := trib.List{}
+		e = c.ListGet(key, &values)
+		if e != nil {
+			return e
+		}
+
+		for _, value := range values.L {
+			n := 0
+			c.ListRemove(&trib.KeyValue{key, value}, &n)
 		}
 	}
 	return nil
